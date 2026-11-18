@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { exerciseById, getAthletes, newId, useStore } from '../data/model'
 import { AMRAP_TEMPLATES, amrapParts, amrapWarmup, buildAmrapRound, type AmrapTemplate } from '../domain/amrap'
 import { resolveBlock } from '../domain/multiAthlete'
-import type { Block, Exercise, Session } from '../domain/types'
+import { isCardio, type Block, type Exercise, type Session } from '../domain/types'
+import { toCalories, toDistance } from './BlockEditor'
 import { blockSummary, num, parseTime, timeInput } from '../format'
 import { ExercisePicker } from './ExercisePicker'
 import { Icon } from './Icon'
@@ -16,19 +17,21 @@ interface Props {
   applyEdit: (orig: Block, edited: Block, scope: string) => Block
 }
 
-type Field = 'reps' | 'distanceM' | 'durationSec'
+type Field = 'reps' | 'distanceM' | 'calories' | 'durationSec'
 
 function amountField(b: Block, ex: Exercise): Field {
   if (b.reps !== undefined) return 'reps'
+  if (b.calories !== undefined) return 'calories'
   if (b.distanceM !== undefined) return 'distanceM'
   if (b.durationSec !== undefined) return 'durationSec'
-  return ex.measure === 'distance' ? 'distanceM' : ex.measure === 'time' ? 'durationSec' : 'reps'
+  return ex.measure === 'distance' ? 'distanceM' : ex.measure === 'calories' ? 'calories' : ex.measure === 'time' ? 'durationSec' : 'reps'
 }
 
 function defaultsFor(e: Exercise, section: Block['section']): Block {
   const b: Block = { id: newId('b'), exerciseId: e.id, sets: 1, restSec: 0, section }
   if (e.measure === 'reps') b.reps = 10
   if (e.measure === 'distance') b.distanceM = 200
+  if (e.measure === 'calories') b.calories = 12
   if (e.measure === 'time') b.durationSec = section === 'warmup' ? 300 : 60
   return b
 }
@@ -88,6 +91,7 @@ export function AmrapEditor({ draft, setDraft, scope, applyEdit }: Props) {
     onSwap: () => setPicking({ section: which, swap: b.id }),
     onMove: (dir: -1 | 1) => move(list, which, i, dir),
     onRemove: () => updateIn(list, which, b.id, null),
+    onReplace: (nb: Block) => updateIn(list, which, b.id, nb),
   })
 
   return (
@@ -168,13 +172,15 @@ interface RowProps {
   onSwap: () => void
   onMove: (dir: -1 | 1) => void
   onRemove: () => void
+  onReplace: (b: Block) => void
 }
 
-function AmrapRow({ v, index, count, onEdit, onSwap, onMove, onRemove }: RowProps) {
+function AmrapRow({ v, index, count, onEdit, onSwap, onMove, onRemove, onReplace }: RowProps) {
   const store = useStore()
   const ex = exerciseById(store, v.exerciseId)
   const field = amountField(v, ex)
-  const label = field === 'reps' ? 'Reps' : field === 'distanceM' ? 'Metres' : 'Time'
+  const label = field === 'reps' ? 'Reps' : field === 'distanceM' ? 'Metres' : field === 'calories' ? 'Calories' : 'Time'
+  const cardio = isCardio(ex) && (field === 'distanceM' || field === 'calories')
   return (
     <div className="amrap-row">
       <div className="spread">
@@ -189,6 +195,12 @@ function AmrapRow({ v, index, count, onEdit, onSwap, onMove, onRemove }: RowProp
           <button className="icon-btn" onClick={onRemove} aria-label="Remove"><Icon name="trash" size={16} /></button>
         </div>
       </div>
+      {cardio && (
+        <div className="seg" role="radiogroup" aria-label="Measure by" style={{ alignSelf: 'flex-start' }}>
+          <button role="radio" aria-checked={field === 'distanceM'} className={field === 'distanceM' ? 'on' : ''} onClick={() => onReplace(toDistance(v))}>Metres</button>
+          <button role="radio" aria-checked={field === 'calories'} className={field === 'calories' ? 'on' : ''} onClick={() => onReplace(toCalories(v))}>Calories</button>
+        </div>
+      )}
       <div className="amrap-inputs">
         <label className="field">
           {label}

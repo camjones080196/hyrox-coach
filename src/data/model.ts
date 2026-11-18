@@ -10,6 +10,9 @@ export interface SetLog {
   reps?: number
   weightKg?: number
   distanceM?: number
+  calories?: number
+  /** Which machine was used, for 'machine of choice' exercises. */
+  machine?: string
   durationSec?: number
   done: boolean
 }

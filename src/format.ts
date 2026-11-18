@@ -34,8 +34,8 @@ export function fmtDistance(m?: number) {
   return m >= 1000 && m % 100 === 0 ? `${m / 1000} km` : `${m} m`
 }
 
-export function blockSummary(b: Pick<Block, 'sets' | 'reps' | 'distanceM' | 'durationSec' | 'weightKg'>) {
-  const amount = b.reps ? `${b.reps}` : b.distanceM ? fmtDistance(b.distanceM) : b.durationSec ? fmtDuration(b.durationSec) : ''
+export function blockSummary(b: Pick<Block, 'sets' | 'reps' | 'distanceM' | 'durationSec' | 'weightKg'> & { calories?: number }) {
+  const amount = b.reps ? `${b.reps}` : b.calories ? `${b.calories} cal` : b.distanceM ? fmtDistance(b.distanceM) : b.durationSec ? fmtDuration(b.durationSec) : ''
   let s = b.sets > 1 ? `${b.sets} × ${amount}` : amount
   if (b.weightKg) s += ` @ ${b.weightKg} kg`
   return s.trim()

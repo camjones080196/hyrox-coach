@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { exerciseById, useStore } from '../data/model'
-import type { Block } from '../domain/types'
+import { isCardio, type Block } from '../domain/types'
 import { num, parseTime, timeInput } from '../format'
 import { ExercisePicker } from './ExercisePicker'
 import { Icon } from './Icon'
@@ -19,6 +19,8 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
   const [picking, setPicking] = useState(false)
   const ex = exerciseById(store, block.exerciseId)
   const set = <K extends keyof Block>(k: K, v: Block[K]) => onChange({ ...block, [k]: v })
+  const cardio = isCardio(ex)
+  const useCalories = cardio && block.calories !== undefined
 
   return (
     <div className="card stack-sm">
@@ -40,11 +42,21 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
         </div>
       </div>
       <button className="btn small" onClick={() => setPicking(true)}><Icon name="swap" size={16} /> Swap exercise</button>
+      {cardio && (
+        <div className="seg" role="radiogroup" aria-label="Measure by">
+          <button role="radio" aria-checked={!useCalories} className={!useCalories ? 'on' : ''} onClick={() => onChange(toDistance(block))}>Distance</button>
+          <button role="radio" aria-checked={useCalories} className={useCalories ? 'on' : ''} onClick={() => onChange(toCalories(block))}>Calories</button>
+        </div>
+      )}
       <div className="num-grid">
         <label className="field">Sets<input type="number" inputMode="numeric" min={1} value={block.sets} onChange={(e) => set('sets', Math.max(1, num(e.target.value) ?? 1))} /></label>
         <label className="field">Reps<input type="number" inputMode="numeric" value={block.reps ?? ''} onChange={(e) => set('reps', num(e.target.value))} /></label>
         <label className="field">Weight kg<input type="number" inputMode="decimal" step="0.5" value={block.weightKg ?? ''} onChange={(e) => set('weightKg', num(e.target.value))} /></label>
-        <label className="field">Distance m<input type="number" inputMode="numeric" value={block.distanceM ?? ''} onChange={(e) => set('distanceM', num(e.target.value))} /></label>
+        {useCalories ? (
+          <label className="field">Calories<input type="number" inputMode="numeric" value={block.calories ?? ''} onChange={(e) => set('calories', num(e.target.value))} /></label>
+        ) : (
+          <label className="field">Distance m<input type="number" inputMode="numeric" value={block.distanceM ?? ''} onChange={(e) => set('distanceM', num(e.target.value))} /></label>
+        )}
         <label className="field">Time m:ss<input inputMode="numeric" defaultValue={timeInput(block.durationSec)} onBlur={(e) => set('durationSec', parseTime(e.target.value))} placeholder="e.g. 20 or 1:30" /></label>
         <label className="field">Rest s<input type="number" inputMode="numeric" value={block.restSec ?? ''} onChange={(e) => set('restSec', num(e.target.value))} /></label>
         <label className="field">Effort 1-10<input type="number" inputMode="numeric" min={1} max={10} value={block.targetRpe ?? ''} onChange={(e) => set('targetRpe', num(e.target.value))} /></label>
@@ -62,4 +74,19 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
       )}
     </div>
   )
+}
+
+/** Rough metres-to-calories conversion so switching keeps a sensible target (~15 m per calorie on a rower or SkiErg). */
+const M_PER_CAL = 15
+
+export function toCalories(b: Block): Block {
+  if (b.calories !== undefined) return b
+  const { distanceM, ...rest } = b
+  return { ...rest, calories: distanceM ? Math.max(1, Math.round(distanceM / M_PER_CAL)) : 15 }
+}
+
+export function toDistance(b: Block): Block {
+  if (b.calories === undefined) return b
+  const { calories, ...rest } = b
+  return { ...rest, distanceM: Math.max(50, Math.round((calories * M_PER_CAL) / 50) * 50) }
 }

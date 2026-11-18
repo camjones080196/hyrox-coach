@@ -8,6 +8,7 @@ export const EXERCISES: Exercise[] = [
   { id: 'run_intervals', name: 'Run intervals', category: 'run', measure: 'distance', notes: 'Run each rep at race effort, walk recovery.', alternatives: ['bike_intervals', 'run_easy'] },
   { id: 'run_compromised', name: 'Compromised run (after station)', category: 'run', measure: 'distance', notes: 'Run straight off a station to practise race legs.', alternatives: ['run_intervals'] },
   { id: 'bike_easy', name: 'Bike / assault bike easy', category: 'conditioning', measure: 'time', notes: 'Low-impact aerobic swap for running.', alternatives: ['run_easy', 'row_easy'], adaptiveFriendly: true },
+  { id: 'cardio_choice', name: 'Calories: machine of choice', category: 'conditioning', measure: 'calories', notes: 'Any cardio machine: assault bike, rower, SkiErg, bike erg. Pick on the day and note which one you used.', alternatives: ['bike_intervals', 'row', 'skierg'], adaptiveFriendly: true },
   { id: 'bike_intervals', name: 'Assault bike intervals', category: 'conditioning', measure: 'time', alternatives: ['run_intervals', 'ski_intervals'], adaptiveFriendly: true },
 
   // Ergs

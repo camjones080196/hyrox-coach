@@ -55,7 +55,7 @@ function ExerciseForm({ ex, onClose }: { ex: Exercise; onClose: () => void }) {
         </label>
         <label className="field">Measured in
           <select value={e.measure} onChange={(x) => set('measure', x.target.value as Exercise['measure'])}>
-            <option value="reps">Reps</option><option value="distance">Distance</option><option value="time">Time</option>
+            <option value="reps">Reps</option><option value="distance">Distance</option><option value="time">Time</option><option value="calories">Calories</option>
           </select>
         </label>
       </div>

@@ -48,7 +48,7 @@ export interface Exercise {
   /** The race station this trains, if any. */
   station?: StationId
   /** What the exercise is usually prescribed in. */
-  measure: 'reps' | 'distance' | 'time'
+  measure: 'reps' | 'distance' | 'time' | 'calories'
   /** Coaching notes, including adaptive cues. */
   notes?: string
   /** Ids of exercises that can be swapped in for this one. */
@@ -96,6 +96,8 @@ export interface Block {
   sets: number
   reps?: number
   distanceM?: number
+  /** Calories on an erg or bike, as an alternative to distance. */
+  calories?: number
   durationSec?: number
   weightKg?: number
   restSec?: number
@@ -108,9 +110,14 @@ export interface Block {
   athletes?: Record<string, BlockOverride>
 }
 
-export type BlockOverride = Partial<Pick<Block, 'exerciseId' | 'sets' | 'reps' | 'distanceM' | 'durationSec' | 'weightKg' | 'restSec' | 'targetRpe' | 'notes'>>
+/** Cardio machines that can be measured in calories instead of distance. */
+export function isCardio(e: Pick<Exercise, 'category'>) {
+  return e.category === 'erg' || e.category === 'conditioning'
+}
 
-export const OVERRIDE_FIELDS = ['exerciseId', 'sets', 'reps', 'distanceM', 'durationSec', 'weightKg', 'restSec', 'targetRpe', 'notes'] as const
+export type BlockOverride = Partial<Pick<Block, 'exerciseId' | 'sets' | 'reps' | 'distanceM' | 'calories' | 'durationSec' | 'weightKg' | 'restSec' | 'targetRpe' | 'notes'>>
+
+export const OVERRIDE_FIELDS = ['exerciseId', 'sets', 'reps', 'distanceM', 'calories', 'durationSec', 'weightKg', 'restSec', 'targetRpe', 'notes'] as const
 
 export interface Session {
   id: string

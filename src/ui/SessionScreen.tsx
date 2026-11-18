@@ -114,7 +114,7 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
                 {otherVersions.map(({ a, ob }) => (
                   <span key={a.id} className="other-version">{a.name}: {ob.exerciseId !== b.exerciseId ? `${exerciseById(store, ob.exerciseId).name}, ` : ''}{blockSummary(ob)}</span>
                 ))}
-                 {logged && logged.length > 0 && <span className="tiny" style={{ color: 'var(--good)', fontWeight: 600 }}>✓ Logged: {logged.map((s) => blockSummary({ sets: 1, ...s })).join(', ')}</span>}
+                 {logged && logged.length > 0 && <span className="tiny" style={{ color: 'var(--good)', fontWeight: 600 }}>✓ Logged: {logged.map((s) => blockSummary({ sets: 1, ...s })).join(', ')}{logged[0]?.machine ? ` on ${logged[0].machine}` : ''}</span>}
               </div>
             </div>
           )
@@ -221,6 +221,7 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
             const b: Block = { id: newId('b'), exerciseId: e.id, sets: 3 }
             if (e.measure === 'reps') b.reps = 10
             if (e.measure === 'distance') b.distanceM = 250
+            if (e.measure === 'calories') b.calories = 15
             if (e.measure === 'time') b.durationSec = 300
             setBlocks([...draft.blocks, b])
             setAdding(false)
@@ -278,21 +279,24 @@ function applyEdit(orig: Block, edited: Block, scope: string): Block {
   return { ...orig, athletes: Object.keys(athletes).length ? athletes : undefined }
 }
 
+const MACHINES = ['Assault / air bike', 'Bike erg', 'Rower', 'SkiErg', 'Treadmill', 'Other']
+
 function initialSets(b: Block, existing?: SetLog[]): SetLog[] {
   if (existing?.length) return existing
-  return Array.from({ length: b.sets }, () => ({ reps: b.reps, weightKg: b.weightKg, distanceM: b.distanceM, durationSec: b.durationSec, done: false }))
+  return Array.from({ length: b.sets }, () => ({ reps: b.reps, weightKg: b.weightKg, distanceM: b.distanceM, calories: b.calories, durationSec: b.durationSec, done: false }))
 }
 
-type Col = 'reps' | 'weightKg' | 'distanceM' | 'durationSec'
-const COL_LABEL: Record<Col, string> = { reps: 'Reps', weightKg: 'kg', distanceM: 'm', durationSec: 'Time' }
+type Col = 'reps' | 'weightKg' | 'distanceM' | 'calories' | 'durationSec'
+const COL_LABEL: Record<Col, string> = { reps: 'Reps', weightKg: 'kg', distanceM: 'm', calories: 'Cal', durationSec: 'Time' }
 
 function columnsFor(b: Block): Col[] {
   const cols: Col[] = []
   if (b.reps !== undefined) cols.push('reps')
   if (b.distanceM !== undefined) cols.push('distanceM')
+  if (b.calories !== undefined) cols.push('calories')
   if (b.weightKg !== undefined) cols.push('weightKg')
   // Always allow a time for distance work so pace can be tracked.
-  if (b.durationSec !== undefined || b.distanceM !== undefined) cols.push('durationSec')
+  if (b.durationSec !== undefined || b.distanceM !== undefined || b.calories !== undefined) cols.push('durationSec')
   return cols.length ? cols : ['reps']
 }
 
@@ -384,6 +388,15 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
               <b>{ex.name}</b>
               <span className="small muted">{blockSummary(b)}</span>
             </div>
+            {b.exerciseId === 'cardio_choice' && (
+              <label className="field">
+                Machine used
+                <select value={sets[0]?.machine ?? ''} onChange={(e) => setBlocks((all) => ({ ...all, [b.id]: all[b.id].map((x) => ({ ...x, machine: e.target.value || undefined })) }))}>
+                  <option value="">Choose…</option>
+                  {MACHINES.map((m) => <option key={m}>{m}</option>)}
+                </select>
+              </label>
+            )}
             <div className="set-row tiny muted" style={{ ['--cols' as string]: cols.length }}>
               <span>Set</span>
               {cols.map((c) => <span key={c} className="center">{COL_LABEL[c]}</span>)}
