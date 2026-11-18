@@ -39,6 +39,7 @@ export function SignIn() {
         : await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + window.location.pathname } })
     setBusy(false)
     if (error) setMsg(error.message)
+    else if (mode === 'up' && data.user && data.user.identities?.length === 0) setMsg('There is already an account with this email. Sign in instead (or reset the password in Supabase).')
     else if (mode === 'up' && !data.session) setMsg('Account created. Check your email for a confirmation link, then come back and sign in.')
   }
 
@@ -64,6 +65,7 @@ export function TeamSetup({ auth, onReady }: { auth: AuthSession; onReady: (work
   const [busy, setBusy] = useState(false)
 
   const create = async () => {
+    if (busy) return
     setBusy(true)
     const { data, error } = await sb.rpc('create_workspace', { team_name: name })
     if (error) { setBusy(false); return setMsg(error.message) }
@@ -79,6 +81,7 @@ export function TeamSetup({ auth, onReady }: { auth: AuthSession; onReady: (work
   }
 
   const join = async () => {
+    if (busy) return
     setBusy(true)
     const { data, error } = await sb.rpc('join_workspace', { code })
     setBusy(false)
@@ -89,7 +92,7 @@ export function TeamSetup({ auth, onReady }: { auth: AuthSession; onReady: (work
   return (
     <div className="app stack">
       <h1>Set up your team</h1>
-      <p className="muted">One of you creates the team, then shares its code with the other.</p>
+      <p className="muted">Only <b>one</b> of you creates the team. The other signs in with their own account and joins with the code shown in that person's Settings.</p>
       <div className="card stack-sm">
         <h2>Join with a code</h2>
         <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="6-character code" maxLength={6} />

@@ -37,30 +37,52 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [sb])
 
-  // Find the team this user belongs to.
+  // Find the team this user belongs to. Only re-check when the user changes,
+  // not on every token refresh, and never treat a failed lookup as "no team"
+  // (that used to show the create-team screen and invite duplicates).
+  const userId = auth?.user.id
+  const [lookupError, setLookupError] = useState<string | null>(null)
+  const [lookupTry, setLookupTry] = useState(0)
   useEffect(() => {
-    if (!sb || !auth) return
-    sb.from('workspace_members').select('workspace_id').eq('user_id', auth.user.id).order('joined_at').then(({ data }) => {
+    if (!sb || !userId) return
+    let cancelled = false
+    sb.from('workspace_members').select('workspace_id').eq('user_id', userId).order('joined_at').then(({ data, error }) => {
+      if (cancelled) return
+      if (error) {
+        setLookupError(error.message)
+        return
+      }
+      setLookupError(null)
       const ids = (data ?? []).map((r) => r.workspace_id as string)
       let saved: string | null = null
       try { saved = localStorage.getItem(WS_KEY) } catch { /* ignore */ }
       setWorkspaceId(saved && ids.includes(saved) ? saved : ids[0] ?? null)
     })
-  }, [sb, auth])
+    return () => { cancelled = true }
+  }, [sb, userId, lookupTry])
 
   // Start the store once we know where data lives.
   useEffect(() => {
     let s: Store | null = null
     if (!sb) s = new Store(new LocalBackend())
-    else if (auth && workspaceId) s = new Store(new SupabaseBackend(sb, workspaceId, auth.user.id))
+    else if (userId && workspaceId) s = new Store(new SupabaseBackend(sb, workspaceId, userId))
     if (!s) return
     setStore(s)
     s.start()
     return () => s!.stop()
-  }, [sb, auth, workspaceId])
+  }, [sb, userId, workspaceId])
 
   if (sb && auth === undefined) return <Loading />
   if (sb && auth === null) return <SignIn />
+  if (sb && auth && lookupError) {
+    return (
+      <div className="app stack">
+        <h1>Can't reach your team</h1>
+        <div className="notice">{lookupError}</div>
+        <button className="btn primary" onClick={() => { setLookupError(null); setLookupTry((n) => n + 1) }}>Try again</button>
+      </div>
+    )
+  }
   if (sb && auth && workspaceId === undefined) return <Loading />
   if (sb && auth && workspaceId === null) {
     return <TeamSetup auth={auth} onReady={(id) => { try { localStorage.setItem(WS_KEY, id) } catch { /* ignore */ } setWorkspaceId(id) }} />

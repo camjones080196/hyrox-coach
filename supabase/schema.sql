@@ -50,6 +50,10 @@ language plpgsql security definer set search_path = public as $$
 declare ws workspaces;
 begin
   if auth.uid() is null then raise exception 'Not signed in'; end if;
+  -- Already in a team? Return it rather than creating a duplicate.
+  select w.* into ws from workspaces w join workspace_members m on m.workspace_id = w.id
+    where m.user_id = auth.uid() order by m.joined_at limit 1;
+  if ws.id is not null then return ws; end if;
   insert into workspaces(name) values (coalesce(nullif(team_name, ''), 'Team')) returning * into ws;
   insert into workspace_members(workspace_id, user_id, email) values (ws.id, auth.uid(), auth.jwt() ->> 'email');
   return ws;
@@ -63,6 +67,8 @@ begin
   if auth.uid() is null then raise exception 'Not signed in'; end if;
   select * into ws from workspaces where join_code = upper(trim(code));
   if ws.id is null then raise exception 'No team with that code'; end if;
+  -- One team per person: joining moves you out of any other team.
+  delete from workspace_members where user_id = auth.uid() and workspace_id <> ws.id;
   insert into workspace_members(workspace_id, user_id, email) values (ws.id, auth.uid(), auth.jwt() ->> 'email')
     on conflict do nothing;
   return ws;
