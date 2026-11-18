@@ -17,7 +17,7 @@ export function CloudConfigForm() {
       }}
     >
       <label className="field">Supabase project URL<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxxx.supabase.co" /></label>
-      <label className="field">Supabase anon (public) key<input value={key} onChange={(e) => setKey(e.target.value)} placeholder="eyJ..." /></label>
+      <label className="field">Supabase publishable (anon) key<input value={key} onChange={(e) => setKey(e.target.value)} placeholder="sb_publishable_... or eyJ..." /></label>
       <button className="btn primary" disabled={!url.startsWith('https://') || key.length < 20}>Turn on sync</button>
     </form>
   )

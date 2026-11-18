@@ -35,10 +35,13 @@ Every push to `main` then tests, builds and publishes the app.
    **Confirm email** so new accounts work straight away.
 4. **Authentication → URL Configuration**: set Site URL to
    `https://camjones080196.github.io/hyrox-coach/`.
-5. **Project Settings → API**: copy the **Project URL** and the **anon public** key.
+5. **Project Settings → API Keys**: copy the **publishable** key (older projects call it
+   the **anon public** key). Never use the **secret** key. The **Project URL**
+   (`https://xxxx.supabase.co`) is under **Project Settings → Data API**.
 6. In GitHub: repo **Settings → Secrets and variables → Actions → Variables**, add
-   `SUPABASE_URL` and `SUPABASE_ANON_KEY` with those values, then re-run the
-   "Deploy to GitHub Pages" workflow. (The anon key is meant to be public; the database
+   `SUPABASE_URL` and `SUPABASE_ANON_KEY` (the publishable key) as **repository**
+   variables, not environment variables, then re-run the
+   "Deploy to GitHub Pages" workflow. (The publishable key is meant to be public; the database
    only lets team members read or write their own team's data.)
 
 Then on each phone: create an account, one person taps **Create team**, and the other
