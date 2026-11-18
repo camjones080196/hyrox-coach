@@ -26,6 +26,14 @@ create table if not exists public.docs (
   primary key (workspace_id, kind, id)
 );
 
+-- Newer Supabase projects don't grant table access to API roles automatically.
+-- Signed-in users get access here; row-level security below limits it to their team.
+grant usage on schema public to authenticated;
+grant select on public.workspaces to authenticated;
+grant select on public.workspace_members to authenticated;
+grant select, insert, update, delete on public.docs to authenticated;
+revoke all on public.workspaces, public.workspace_members, public.docs from anon;
+
 alter table public.workspaces enable row level security;
 alter table public.workspace_members enable row level security;
 alter table public.docs enable row level security;
@@ -74,6 +82,8 @@ begin
   return ws;
 end $$;
 
+revoke execute on function public.create_workspace(text), public.join_workspace(text), public.is_member(uuid) from public, anon;
+grant execute on function public.is_member(uuid) to authenticated;
 grant execute on function public.create_workspace(text) to authenticated;
 grant execute on function public.join_workspace(text) to authenticated;
 
