@@ -48,7 +48,16 @@ h3 { font-size: 1rem; }
 p { margin: 0; }
 a { color: inherit; }
 
-.app { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom)); }
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  /* Keep content clear of the notch / Dynamic Island, rounded corners and home indicator. */
+  padding:
+    calc(16px + env(safe-area-inset-top))
+    calc(16px + env(safe-area-inset-right))
+    calc(var(--nav-h) + 24px + env(safe-area-inset-bottom))
+    calc(16px + env(safe-area-inset-left));
+}
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .stack-sm { display: flex; flex-direction: column; gap: 6px; }
 .row { display: flex; align-items: center; gap: 8px; }
@@ -96,7 +105,7 @@ input[type='checkbox'] { width: 24px; height: 24px; min-height: 0; accent-color:
 .toggle { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 12px; min-height: 40px; cursor: pointer; font-size: 0.9rem; }
 .toggle.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 
-.nav { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--nav-h) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--surface); border-top: 1px solid var(--line); display: flex; justify-content: center; z-index: 10; }
+.nav { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--nav-h) + env(safe-area-inset-bottom)); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background: var(--surface); border-top: 1px solid var(--line); display: flex; justify-content: center; z-index: 10; }
 .nav-inner { display: flex; width: 100%; max-width: 640px; }
 .nav button { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.7rem; color: var(--muted); cursor: pointer; }
 .nav button .ico { font-size: 1.3rem; line-height: 1; }
@@ -116,7 +125,7 @@ input[type='checkbox'] { width: 24px; height: 24px; min-height: 0; accent-color:
 .set-row input { padding: 8px; min-height: 40px; text-align: center; }
 
 .sheet-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 0.45); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
-.sheet { background: var(--bg); width: 100%; max-width: 640px; max-height: 88dvh; overflow: auto; border-radius: 18px 18px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+.sheet { background: var(--bg); width: 100%; max-width: 640px; max-height: calc(100dvh - env(safe-area-inset-top) - 24px); overflow: auto; border-radius: 18px 18px 0 0; padding: 16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
 
 .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .week-strip .d { text-align: center; padding: 6px 0; border-radius: 8px; font-size: 0.7rem; background: var(--surface-2); color: var(--muted); }
