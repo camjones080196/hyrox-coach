@@ -57,10 +57,18 @@ export interface Exercise {
   adaptiveFriendly?: boolean
 }
 
-export interface AthleteProfile {
+/** One person following the plan. */
+export interface Athlete {
+  id: string
   name: string
   division: DivisionId
   level: Level
+  /** Free-text limitations, e.g. "left leg weaker, no jumping". */
+  limitations?: string
+}
+
+/** Settings shared by everyone on the plan. */
+export interface PlanSettings {
   /** Training days per week (2-6). */
   daysPerWeek: number
   /** Preferred weekdays, 0 = Monday ... 6 = Sunday. Length should match daysPerWeek. */
@@ -73,9 +81,10 @@ export interface AthleteProfile {
   startDate: string
   /** Stations to give extra attention to. */
   weakStations: StationId[]
-  /** Free-text limitations, e.g. "left leg weaker, no jumping". */
-  limitations?: string
 }
+
+/** What the single-athlete generator works from. */
+export type AthleteProfile = PlanSettings & Omit<Athlete, 'id'>
 
 export type Phase = 'base' | 'build' | 'specific' | 'taper' | 'race'
 
@@ -93,7 +102,13 @@ export interface Block {
   /** Rate of perceived effort target, 1-10. */
   targetRpe?: number
   notes?: string
+  /** Per-athlete differences from the values above, keyed by athlete id. */
+  athletes?: Record<string, BlockOverride>
 }
+
+export type BlockOverride = Partial<Pick<Block, 'exerciseId' | 'sets' | 'reps' | 'distanceM' | 'durationSec' | 'weightKg' | 'restSec' | 'targetRpe' | 'notes'>>
+
+export const OVERRIDE_FIELDS = ['exerciseId', 'sets', 'reps', 'distanceM', 'durationSec', 'weightKg', 'restSec', 'targetRpe', 'notes'] as const
 
 export interface Session {
   id: string

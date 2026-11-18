@@ -1,21 +1,27 @@
 import { useState } from 'react'
-import { getLog, getSessions, getWeeks, newId, saveSession, today, useStore } from '../data/model'
+import { anyLog, getLog, getSessions, getWeeks, newId, saveSession, today, useAthlete, useStore } from '../data/model'
 import { addDays, mondayOf } from '../domain/dates'
-import type { Block, PlanWeek, Session } from '../domain/types'
+import type { Block, BlockOverride, PlanWeek, Session } from '../domain/types'
 import { fmtDate, PHASE_NAMES } from '../format'
 import { SessionCard } from './TodayScreen'
 
 const DAY = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
-function scaleBlock(b: Block, f: number): Block {
+function scaleValues<T extends BlockOverride>(b: T, f: number): T {
   const r = (n: number | undefined, step: number) => (n === undefined ? n : Math.max(step, Math.round((n * f) / step) * step))
-  return {
-    ...b,
-    sets: f < 1 && b.sets > 1 ? Math.max(1, Math.round(b.sets * f)) : b.sets,
-    reps: r(b.reps, 1),
-    distanceM: r(b.distanceM, 10),
-    durationSec: r(b.durationSec, 30),
-  }
+  const out = { ...b }
+  if (b.sets !== undefined) out.sets = f < 1 && b.sets > 1 ? Math.max(1, Math.round(b.sets * f)) : b.sets
+  if (b.reps !== undefined) out.reps = r(b.reps, 1)
+  if (b.distanceM !== undefined) out.distanceM = r(b.distanceM, 10)
+  if (b.durationSec !== undefined) out.durationSec = r(b.durationSec, 30)
+  return out
+}
+
+/** Scale a block for everyone, including each athlete's own numbers. */
+function scaleBlock(b: Block, f: number): Block {
+  const out = scaleValues(b, f)
+  if (b.athletes) out.athletes = Object.fromEntries(Object.entries(b.athletes).map(([k, o]) => [k, scaleValues(o, f)]))
+  return out
 }
 
 export function PlanScreen({ onOpen }: { onOpen: (id: string) => void }) {
@@ -39,12 +45,13 @@ export function PlanScreen({ onOpen }: { onOpen: (id: string) => void }) {
 
 function WeekCard({ w, sessions, open, current, onToggle, onOpen }: { w: PlanWeek; sessions: Session[]; open: boolean; current: boolean; onToggle: () => void; onOpen: (id: string) => void }) {
   const store = useStore()
+  const { athleteId } = useAthlete()
   const t = today()
-  const done = sessions.filter((s) => { const l = getLog(store, s.id); return l && l.status !== 'skipped' }).length
+  const done = sessions.filter((s) => { const l = getLog(store, s.id, athleteId); return l && l.status !== 'skipped' }).length
 
   const scaleWeek = (f: number) => {
     for (const s of sessions) {
-      if (getLog(store, s.id) || s.date < t) continue
+      if (anyLog(store, s.id) || s.date < t) continue
       saveSession(store, { ...s, blocks: s.blocks.map((b) => scaleBlock(b, f)), minutes: Math.round(s.minutes * (f < 1 ? 0.85 : 1.05)) })
     }
   }
@@ -73,7 +80,7 @@ function WeekCard({ w, sessions, open, current, onToggle, onOpen }: { w: PlanWee
         {DAY.map((d, i) => {
           const date = addDays(w.startDate, i)
           const s = sessions.filter((x) => x.date === date)
-          const logged = s.length > 0 && s.every((x) => { const l = getLog(store, x.id); return l && l.status !== 'skipped' })
+          const logged = s.length > 0 && s.every((x) => { const l = getLog(store, x.id, athleteId); return l && l.status !== 'skipped' })
           const miss = s.length > 0 && date < t && !logged
           return <div key={i} className={`d ${s.length ? 'has' : ''} ${logged ? 'done' : miss ? 'miss' : ''}`}>{d}</div>
         })}
@@ -86,7 +93,7 @@ function WeekCard({ w, sessions, open, current, onToggle, onOpen }: { w: PlanWee
             <button className="btn small" onClick={() => scaleWeek(0.8)}>Make easier (−20%)</button>
             <button className="btn small" onClick={() => scaleWeek(1.1)}>Make harder (+10%)</button>
           </div>
-          <span className="tiny muted">Easier/harder changes sets, reps, distances and times on this week's upcoming sessions. Weights stay the same.</span>
+          <span className="tiny muted">Easier/harder changes sets, reps, distances and times on this week's upcoming sessions. Weights stay the same. Applies to everyone.</span>
         </div>
       )}
     </div>

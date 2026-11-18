@@ -4,7 +4,7 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-export type Kind = 'profile' | 'week' | 'session' | 'log' | 'exercise'
+export type Kind = 'profile' | 'athlete' | 'week' | 'session' | 'log' | 'exercise'
 
 export interface Doc<T = unknown> {
   kind: Kind

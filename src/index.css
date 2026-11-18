@@ -84,7 +84,7 @@ textarea { min-height: 80px; resize: vertical; }
 input[type='checkbox'] { width: 24px; height: 24px; min-height: 0; accent-color: var(--good); }
 .num-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
 
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: var(--surface-2); color: var(--text); }
+.chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: var(--surface-2); color: var(--text); }
 .chip.base { background: color-mix(in srgb, var(--base) 20%, transparent); color: var(--base); }
 .chip.build { background: color-mix(in srgb, var(--build) 20%, transparent); color: var(--build); }
 .chip.specific { background: color-mix(in srgb, var(--specific) 20%, transparent); color: var(--specific); }
@@ -134,3 +134,7 @@ input[type='checkbox'] { width: 24px; height: 24px; min-height: 0; accent-color:
 .chart .dot { fill: var(--accent); }
 .chart text { fill: var(--muted); font-size: 10px; }
 .notice { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: var(--radius); padding: 12px; font-size: 0.9rem; }
+
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: none; background: none; border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; color: var(--muted); cursor: pointer; min-height: 32px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }

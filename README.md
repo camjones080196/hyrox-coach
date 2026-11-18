@@ -13,6 +13,8 @@ the other straight away.
 
 ## Use it
 
+Several athletes can share one plan (e.g. an adaptive athlete and a training partner): everyone gets the same sessions, with weights, distances and exercise versions set for their own division and level, and their own logs and progress. Switch athlete at the top of the screen.
+
 - **Live app:** https://camjones080196.github.io/hyrox-coach/ (after setup below)
 - On iPhone: open it in Safari, tap Share, then **Add to Home Screen**.
 - On Android: open it in Chrome, tap ⋮, then **Install app**.

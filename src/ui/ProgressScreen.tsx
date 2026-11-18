@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { exerciseById, getLog, getProfile, getSessions, today, useStore } from '../data/model'
+import { exerciseById, getAthletes, getLog, getSessions, getSettings, today, useAthlete, useStore } from '../data/model'
+import { resolveBlock } from '../domain/multiAthlete'
 import { DIVISIONS, STATION_NAMES, STATION_ORDER } from '../domain/standards'
 import type { StationId } from '../domain/types'
 import { fmtDuration } from '../format'
@@ -7,12 +8,14 @@ import { LineChart, type Point } from './Chart'
 
 export function ProgressScreen() {
   const store = useStore()
-  const profile = getProfile(store)!
-  const division = DIVISIONS[profile.division]
+  const { athleteId } = useAthlete()
+  const profile = getSettings(store)!
+  const athlete = getAthletes(store).find((a) => a.id === athleteId)!
+  const division = DIVISIONS[athlete.division]
   const t = today()
   const sessions = getSessions(store)
   const past = sessions.filter((s) => s.date <= t)
-  const logs = past.map((s) => ({ s, log: getLog(store, s.id) }))
+  const logs = past.map((s) => ({ s, log: getLog(store, s.id, athleteId) }))
   const done = logs.filter((x) => x.log && x.log.status !== 'skipped')
   const completion = past.length ? Math.round((done.length / past.length) * 100) : 0
   const rpes = done.map((x) => x.log!.rpe).filter((r): r is number => !!r)
@@ -21,7 +24,7 @@ export function ProgressScreen() {
 
   // Collect every completed set, with its exercise.
   const sets = done.flatMap(({ s, log }) =>
-    s.blocks.flatMap((b) => (log!.blocks[b.id] ?? []).filter((x) => x.done).map((x) => ({ date: s.date, ex: exerciseById(store, b.exerciseId), set: x }))),
+    s.blocks.map((b) => resolveBlock(b, athleteId)).flatMap((b) => (log!.blocks[b.id] ?? []).filter((x) => x.done).map((x) => ({ date: s.date, ex: exerciseById(store, b.exerciseId), set: x }))),
   )
 
   const byDate = (pts: Point[], pick: (a: number, b: number) => number) => {
@@ -54,7 +57,7 @@ export function ProgressScreen() {
 
   return (
     <div className="stack">
-      <h1>Progress</h1>
+      <h1>Progress: {athlete.name}</h1>
       <div className="stats">
         <div className="card stat"><b>{done.length}</b><span className="small muted">sessions done</span></div>
         <div className="card stat"><b>{completion}%</b><span className="small muted">completed</span></div>

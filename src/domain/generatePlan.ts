@@ -77,6 +77,7 @@ function round(n: number, step: number) {
 function loadFor(ctx: Ctx, station: StationId): number | undefined {
   const std = stationStandard(ctx.profile.division, station)
   if (std.weightKg === undefined) return undefined
+  if (ctx.load === 1) return std.weightKg
   const step = station === 'wall_balls' ? 1 : station.startsWith('sled') ? 2.5 : 2
   return round(std.weightKg * ctx.load, step)
 }

@@ -1,25 +1,27 @@
 import { useEffect, useState } from 'react'
 import { CLOUD_FROM_ENV, saveCloudConfig, supabase } from '../data/backend'
-import { applyProfile, getProfile, useStore } from '../data/model'
+import { applyPlan, getAthletes, getSettings, useStore } from '../data/model'
 import { CloudConfigForm } from './CloudSetup'
-import { ProfileForm } from './ProfileForm'
+import { PlanForm } from './ProfileForm'
 
 export function SettingsScreen({ workspaceId }: { workspaceId?: string }) {
   const store = useStore()
-  const profile = getProfile(store)!
+  const settings = getSettings(store)!
+  const athletes = getAthletes(store)
   const [saved, setSaved] = useState(false)
 
   return (
     <div className="stack">
       <h1>Settings</h1>
       <div className="card stack">
-        <h2>Athlete and plan</h2>
-        <ProfileForm
-          initial={profile}
+        <PlanForm
+          key={athletes.map((a) => a.id).join()}
+          initialSettings={settings}
+          initialAthletes={athletes}
           submitLabel="Save settings"
           allowKeepPlan
-          onSubmit={async (p, regen) => {
-            await applyProfile(store, p, regen)
+          onSubmit={async (p, a, regen) => {
+            await applyPlan(store, p, a, regen)
             setSaved(true)
             setTimeout(() => setSaved(false), 2500)
           }}
@@ -41,7 +43,7 @@ export function SettingsScreen({ workspaceId }: { workspaceId?: string }) {
 
       <div className="card stack-sm">
         <h2>Safety</h2>
-        <p className="small muted">This plan is a starting point, not medical advice. Check it with his physio or doctor, especially anything involving jumping, deep knee bends or heavy spinal loading, and stop any exercise that causes pain, numbness or unusual symptoms.</p>
+        <p className="small muted">This plan is a starting point, not medical advice. Check it with a physio or doctor, especially anything involving jumping, deep knee bends or heavy spinal loading, and stop any exercise that causes pain, numbness or unusual symptoms.</p>
       </div>
     </div>
   )

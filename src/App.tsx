@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { Session as AuthSession } from '@supabase/supabase-js'
 import { LocalBackend, SupabaseBackend, supabase } from './data/backend'
-import { applyProfile, getProfile, StoreContext, useStore } from './data/model'
+import { AthleteContext, applyPlan, getAthletes, getSettings, migrate, rememberAthleteId, savedAthleteId, StoreContext, useStore } from './data/model'
 import { Store } from './data/store'
 import { SignIn, TeamSetup } from './ui/CloudSetup'
 import { ExercisesScreen } from './ui/ExercisesScreen'
 import { PlanScreen } from './ui/PlanScreen'
-import { defaultProfile, ProfileForm } from './ui/ProfileForm'
+import { defaultAthletes, defaultSettings, PlanForm } from './ui/ProfileForm'
 import { ProgressScreen } from './ui/ProgressScreen'
 import { SessionScreen } from './ui/SessionScreen'
 import { SettingsScreen } from './ui/SettingsScreen'
@@ -82,33 +82,52 @@ function Main({ workspaceId }: { workspaceId?: string }) {
   const store = useStore()
   const [tab, setTab] = useState<Tab>('today')
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [chosen, setChosen] = useState<string | null>(savedAthleteId())
+
+  useEffect(() => {
+    if (store.status === 'ready') migrate(store)
+  }, [store, store.status])
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [tab, sessionId])
 
   if (store.status === 'loading') return <Loading />
-  const profile = getProfile(store)
+  const settings = getSettings(store)
+  const athletes = getAthletes(store)
 
-  if (!profile) {
+  if (!settings || !athletes.length) {
     return (
       <div className="app stack">
         <h1>Set up the plan</h1>
-        <p className="muted">Tell us about the athlete and we'll build a starter plan up to race day. You can change everything afterwards.</p>
-        <ProfileForm initial={defaultProfile()} submitLabel="Build my plan" onSubmit={(p) => applyProfile(store, p, true)} />
+        <p className="muted">Add who's training and we'll build one shared plan up to race day, with each person's own weights and distances. You can change everything afterwards.</p>
+        <PlanForm initialSettings={settings ?? defaultSettings()} initialAthletes={defaultAthletes()} submitLabel="Build our plan" onSubmit={(s, a) => applyPlan(store, s, a, true)} />
       </div>
     )
+  }
+
+  const athleteId = athletes.some((a) => a.id === chosen) ? chosen! : athletes[0].id
+  const setAthleteId = (id: string) => {
+    setChosen(id)
+    rememberAthleteId(id)
   }
 
   const statusClass = store.backend.mode === 'local' ? 'local' : store.status === 'saving' ? 'saving' : store.status === 'error' ? 'error' : ''
   const statusText = store.backend.mode === 'local' ? 'This phone only' : store.status === 'saving' ? 'Saving…' : store.status === 'error' ? `Sync error: ${store.error}` : 'Synced'
 
   return (
-    <>
+    <AthleteContext.Provider value={{ athleteId, setAthleteId }}>
       <div className="app">
-        <div className="topbar tiny muted">
+        <div className="topbar">
           <span className={`sync-dot ${statusClass}`} />
-          <span>{statusText}</span>
+          <span className="tiny muted grow">{statusText}</span>
+          {athletes.length > 1 && (
+            <div className="seg" role="tablist" aria-label="Athlete">
+              {athletes.map((a) => (
+                <button key={a.id} role="tab" aria-selected={a.id === athleteId} className={a.id === athleteId ? 'on' : ''} onClick={() => setAthleteId(a.id)}>{a.name}</button>
+              ))}
+            </div>
+          )}
         </div>
         {sessionId ? (
           <SessionScreen id={sessionId} onBack={() => setSessionId(null)} />
@@ -134,6 +153,6 @@ function Main({ workspaceId }: { workspaceId?: string }) {
           ))}
         </div>
       </nav>
-    </>
+    </AthleteContext.Provider>
   )
 }

@@ -1,4 +1,4 @@
-import { getLog, getProfile, getSessions, getWeeks, saveLog, saveSession, today, useStore } from '../data/model'
+import { getAthletes, getLog, getSessions, getSettings, getWeeks, saveLog, saveSession, today, useAthlete, useStore } from '../data/model'
 import { addDays, daysBetween, mondayOf } from '../domain/dates'
 import { DIVISIONS } from '../domain/standards'
 import type { Session } from '../domain/types'
@@ -6,7 +6,8 @@ import { fmtDate, PHASE_NAMES, SESSION_TYPES } from '../format'
 
 export function SessionCard({ s, onOpen }: { s: Session; onOpen: () => void }) {
   const store = useStore()
-  const log = getLog(store, s.id)
+  const { athleteId } = useAthlete()
+  const log = getLog(store, s.id, athleteId)
   const t = today()
   const cls = log ? (log.status === 'skipped' ? 'skipped' : 'done') : s.date < t ? 'missed' : s.date === t ? 'today' : ''
   const type = SESSION_TYPES[s.type]
@@ -27,22 +28,24 @@ export function SessionCard({ s, onOpen }: { s: Session; onOpen: () => void }) {
 
 export function TodayScreen({ onOpen }: { onOpen: (id: string) => void }) {
   const store = useStore()
-  const profile = getProfile(store)!
+  const { athleteId } = useAthlete()
+  const profile = getSettings(store)!
+  const athlete = getAthletes(store).find((a) => a.id === athleteId)!
   const sessions = getSessions(store)
   const t = today()
   const daysToRace = daysBetween(t, profile.raceDate)
   const week = getWeeks(store).find((w) => w.startDate === mondayOf(t))
   const todays = sessions.filter((s) => s.date === t)
   const next = sessions.filter((s) => s.date > t).slice(0, 3)
-  const missed = sessions.filter((s) => s.date < t && s.date >= addDays(t, -7) && !getLog(store, s.id))
+  const missed = sessions.filter((s) => s.date < t && s.date >= addDays(t, -7) && !getLog(store, s.id, athleteId))
 
   const weekSessions = sessions.filter((s) => s.date >= mondayOf(t) && s.date < addDays(mondayOf(t), 7))
-  const weekDone = weekSessions.filter((s) => getLog(store, s.id)?.status === 'done' || getLog(store, s.id)?.status === 'partial').length
+  const weekDone = weekSessions.filter((s) => ['done', 'partial'].includes(getLog(store, s.id, athleteId)?.status ?? '')).length
 
   return (
     <div className="stack">
       <div className="stack-sm">
-        <span className="small muted">{profile.name ? `${profile.name} · ` : ''}{DIVISIONS[profile.division].name}</span>
+        <span className="small muted">{athlete.name} · {DIVISIONS[athlete.division].name}</span>
         <h1>{daysToRace > 0 ? `${daysToRace} days to race day` : daysToRace === 0 ? 'Race day! 🏁' : 'Race done'}</h1>
         {week && (
           <div className="row-wrap">
@@ -69,7 +72,7 @@ export function TodayScreen({ onOpen }: { onOpen: (id: string) => void }) {
                 <button className="btn small" onClick={() => saveSession(store, { ...s, date: t })}>Do it today</button>
                 <button className="btn small" onClick={() => saveSession(store, { ...s, date: addDays(t, 1) })}>Tomorrow</button>
                 <button className="btn small" onClick={() => onOpen(s.id)}>Log it</button>
-                <button className="btn small ghost" onClick={() => saveLog(store, { sessionId: s.id, status: 'skipped', blocks: {}, completedAt: new Date().toISOString() })}>Skip</button>
+                <button className="btn small ghost" onClick={() => saveLog(store, { sessionId: s.id, athleteId, status: 'skipped', blocks: {}, completedAt: new Date().toISOString() })}>Skip</button>
               </div>
             </div>
           ))}

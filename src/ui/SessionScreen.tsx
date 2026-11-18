@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { deleteSession, exerciseById, getLog, getSessions, newId, saveLog, saveSession, today, useStore, type SessionLog, type SetLog } from '../data/model'
-import type { Block, Session, SessionType } from '../domain/types'
+import { deleteSession, exerciseById, getAthletes, getLog, getSessions, newId, saveLog, saveSession, today, useAthlete, useStore, type SessionLog, type SetLog } from '../data/model'
+import { resolveBlock } from '../domain/multiAthlete'
+import { OVERRIDE_FIELDS, type Block, type BlockOverride, type Session, type SessionType } from '../domain/types'
 import { blockSummary, fmtDate, fmtDuration, num, parseTime, SESSION_TYPES, timeInput } from '../format'
 import { BlockEditor } from './BlockEditor'
 import { ExercisePicker } from './ExercisePicker'
@@ -11,6 +12,7 @@ export function SessionScreen({ id, onBack }: { id: string; onBack: () => void }
   const store = useStore()
   const session = getSessions(store).find((s) => s.id === id)
   const [mode, setMode] = useState<Mode>('view')
+  const { athleteId } = useAthlete()
   if (!session) {
     return (
       <div className="stack">
@@ -19,7 +21,7 @@ export function SessionScreen({ id, onBack }: { id: string; onBack: () => void }
       </div>
     )
   }
-  const log = getLog(store, session.id)
+  const log = getLog(store, session.id, athleteId)
 
   return (
     <div className="stack">
@@ -45,6 +47,8 @@ export function SessionScreen({ id, onBack }: { id: string; onBack: () => void }
 
 function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: SessionLog; onEdit: () => void; onLog: () => void }) {
   const store = useStore()
+  const { athleteId } = useAthlete()
+  const others = getAthletes(store).filter((a) => a.id !== athleteId)
   const [moving, setMoving] = useState(false)
   const t = SESSION_TYPES[session.type]
   return (
@@ -67,8 +71,12 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
       )}
 
       <div className="card">
-        {session.blocks.map((b, i) => {
+        {session.blocks.map((raw, i) => {
+          const b = resolveBlock(raw, athleteId)
           const ex = exerciseById(store, b.exerciseId)
+          const otherVersions = others
+            .map((a) => ({ a, ob: resolveBlock(raw, a.id) }))
+            .filter(({ ob }) => ob.exerciseId !== b.exerciseId || blockSummary(ob) !== blockSummary(b))
           const logged = log?.blocks[b.id]?.filter((s) => s.done)
           return (
             <div key={b.id} className="block-row">
@@ -87,6 +95,9 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
                 )}
                 {b.notes && <span className="small">{b.notes}</span>}
                 {ex.notes && <span className="tiny muted">{ex.notes}</span>}
+                {otherVersions.map(({ a, ob }) => (
+                  <span key={a.id} className="tiny muted">{a.name}: {ob.exerciseId !== b.exerciseId ? `${exerciseById(store, ob.exerciseId).name}, ` : ''}{blockSummary(ob)}</span>
+                ))}
                 {logged && logged.length > 0 && <span className="tiny" style={{ color: 'var(--good)' }}>Logged: {logged.map((s) => blockSummary({ sets: 1, ...s })).join(', ')}</span>}
               </div>
             </div>
@@ -116,7 +127,7 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
         </div>
       )}
       {!log && (
-        <button className="btn ghost danger" onClick={() => saveLog(store, { sessionId: session.id, status: 'skipped', blocks: {}, completedAt: new Date().toISOString() })}>
+        <button className="btn ghost danger" onClick={() => saveLog(store, { sessionId: session.id, athleteId, status: 'skipped', blocks: {}, completedAt: new Date().toISOString() })}>
           Mark as skipped
         </button>
       )}
@@ -126,8 +137,10 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
 
 function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: () => void; onDelete: () => void }) {
   const store = useStore()
+  const athletes = getAthletes(store)
   const [draft, setDraft] = useState<Session>(session)
   const [adding, setAdding] = useState(false)
+  const [scope, setScope] = useState<string>('all')
   const set = <K extends keyof Session>(k: K, v: Session[K]) => setDraft((d) => ({ ...d, [k]: v }))
   const setBlocks = (blocks: Block[]) => set('blocks', blocks)
 
@@ -147,13 +160,25 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
       <label className="field">Focus<textarea value={draft.focus} onChange={(e) => set('focus', e.target.value)} style={{ minHeight: 60 }} /></label>
 
       <h2>Exercises</h2>
+      {athletes.length > 1 && (
+        <div className="stack-sm">
+          <span className="small muted">Exercise changes apply to</span>
+          <div className="toggle-group">
+            <button className={`toggle ${scope === 'all' ? 'on' : ''}`} onClick={() => setScope('all')}>Everyone</button>
+            {athletes.map((a) => (
+              <button key={a.id} className={`toggle ${scope === a.id ? 'on' : ''}`} onClick={() => setScope(a.id)}>{a.name} only</button>
+            ))}
+          </div>
+          <span className="tiny muted">{scope === 'all' ? 'Changing a value here sets it for everyone.' : 'Only this person\'s version changes. Everyone else keeps theirs.'}</span>
+        </div>
+      )}
       {draft.blocks.map((b, i) => (
         <BlockEditor
-          key={b.id}
-          block={b}
+          key={`${b.id}-${scope}`}
+          block={scope === 'all' ? b : resolveBlock(b, scope)}
           index={i}
           count={draft.blocks.length}
-          onChange={(nb) => setBlocks(draft.blocks.map((x) => (x.id === b.id ? nb : x)))}
+          onChange={(nb) => setBlocks(draft.blocks.map((x) => (x.id === b.id ? applyEdit(x, nb, scope) : x)))}
           onRemove={() => setBlocks(draft.blocks.filter((x) => x.id !== b.id))}
           onMove={(dir) => {
             const arr = [...draft.blocks]
@@ -184,6 +209,28 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
   )
 }
 
+/** Apply an edited block either to everyone or as one athlete's override. */
+function applyEdit(orig: Block, edited: Block, scope: string): Block {
+  if (scope === 'all') {
+    const changed = OVERRIDE_FIELDS.filter((f) => orig[f] !== edited[f])
+    if (!orig.athletes || !changed.length) return { ...edited, athletes: orig.athletes }
+    // A change for everyone replaces any personal value for that field.
+    const athletes: Record<string, BlockOverride> = {}
+    for (const [id, o] of Object.entries(orig.athletes)) {
+      const copy: Record<string, unknown> = { ...o }
+      for (const f of changed) delete copy[f]
+      if (Object.keys(copy).length) athletes[id] = copy as BlockOverride
+    }
+    return { ...edited, athletes: Object.keys(athletes).length ? athletes : undefined }
+  }
+  const diff: Record<string, unknown> = {}
+  for (const f of OVERRIDE_FIELDS) if (orig[f] !== edited[f]) diff[f] = edited[f]
+  const athletes = { ...(orig.athletes ?? {}) }
+  if (Object.keys(diff).length) athletes[scope] = diff as BlockOverride
+  else delete athletes[scope]
+  return { ...orig, athletes: Object.keys(athletes).length ? athletes : undefined }
+}
+
 function initialSets(b: Block, existing?: SetLog[]): SetLog[] {
   if (existing?.length) return existing
   return Array.from({ length: b.sets }, () => ({ reps: b.reps, weightKg: b.weightKg, distanceM: b.distanceM, durationSec: b.durationSec, done: false }))
@@ -202,8 +249,11 @@ function columnsFor(b: Block): Col[] {
   return cols.length ? cols : ['reps']
 }
 
-function SessionLogForm({ session, existing, onDone }: { session: Session; existing?: SessionLog; onDone: () => void }) {
+function SessionLogForm({ session: rawSession, existing, onDone }: { session: Session; existing?: SessionLog; onDone: () => void }) {
   const store = useStore()
+  const { athleteId } = useAthlete()
+  const athlete = getAthletes(store).find((a) => a.id === athleteId)
+  const session = { ...rawSession, blocks: rawSession.blocks.map((b) => resolveBlock(b, athleteId)) }
   const [blocks, setBlocks] = useState<Record<string, SetLog[]>>(() =>
     Object.fromEntries(session.blocks.map((b) => [b.id, initialSets(b, existing?.blocks[b.id])])),
   )
@@ -218,14 +268,14 @@ function SessionLogForm({ session, existing, onDone }: { session: Session; exist
 
   const save = () => {
     const status = doneCount === 0 ? 'skipped' : doneCount === allSets.length ? 'done' : 'partial'
-    saveLog(store, { sessionId: session.id, status, rpe, notes: notes || undefined, blocks, completedAt: new Date().toISOString() })
+    saveLog(store, { sessionId: session.id, athleteId, status, rpe, notes: notes || undefined, blocks, completedAt: new Date().toISOString() })
     onDone()
   }
 
   return (
     <div className="stack">
       <div className="spread">
-        <h1>Log workout</h1>
+        <h1>Log workout{athlete && getAthletes(store).length > 1 ? `: ${athlete.name}` : ''}</h1>
         <button className="btn small" onClick={() => setBlocks((all) => Object.fromEntries(Object.entries(all).map(([k, v]) => [k, v.map((s) => ({ ...s, done: true }))])))}>
           Tick all
         </button>
