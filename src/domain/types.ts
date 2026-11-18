@@ -102,6 +102,8 @@ export interface Block {
   /** Rate of perceived effort target, 1-10. */
   targetRpe?: number
   notes?: string
+  /** Where the block sits in the session. AMRAPs repeat only the main part. */
+  section?: 'warmup' | 'main' | 'cooldown'
   /** Per-athlete differences from the values above, keyed by athlete id. */
   athletes?: Record<string, BlockOverride>
 }

@@ -28,7 +28,7 @@ export function generateSharedPlan(settings: PlanSettings, athletes: Athlete[]):
   return base
 }
 
-function diffBlock(base: Block, other: Block): BlockOverride {
+export function diffBlock(base: Block, other: Block): BlockOverride {
   const d: Record<string, unknown> = {}
   for (const f of OVERRIDE_FIELDS) if (base[f] !== other[f]) d[f] = other[f]
   return d as BlockOverride

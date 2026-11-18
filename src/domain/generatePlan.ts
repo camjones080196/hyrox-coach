@@ -1,3 +1,4 @@
+import { AMRAP_TEMPLATES, amrapWarmup, buildAmrapRound } from './amrap'
 import { addDays, daysBetween, mondayOf } from './dates'
 import { DIVISIONS, STATION_ORDER, stationStandard } from './standards'
 import type {
@@ -214,19 +215,16 @@ const BUILDERS: Record<SessionType, Builder> = {
 
   amrap: (ctx, sid) => {
     const cap = ctx.profile.level === 'beginner' ? 15 : ctx.profile.level === 'intermediate' ? 18 : 20
-    const runM = Math.max(100, Math.round(Math.min(ctx.division.runLegM, 400) / 2 / 25) * 25)
-    const one = { ...ctx, volume: 1 }
+    const template = AMRAP_TEMPLATES.find((t) => t.id === 'stations')!
     return {
       type: 'amrap',
       title: `${cap}-minute station AMRAP`,
       focus: 'Steady pace and good form. Log your score and try to beat it next time.',
-      minutes: cap + 20,
+      minutes: cap + 15,
       capMin: cap,
       blocks: [
-        legBlock(one, `${sid}-b1`, 1, { sets: 1, distanceM: runM, exerciseId: 'run_compromised', restSec: 0, notes: undefined }),
-        stationBlock(one, `${sid}-b2`, 'wall_balls', 0.15, 1, { restSec: 0 }),
-        stationBlock(one, `${sid}-b3`, 'farmers_carry', 0.25, 1, { restSec: 0 }),
-        stationBlock(one, `${sid}-b4`, 'sandbag_lunge', 0.2, 1, { restSec: 0 }),
+        amrapWarmup(`${sid}-w1`),
+        ...buildAmrapRound(template, [{ id: 'self', division: ctx.profile.division, level: ctx.profile.level }], sid),
       ],
     }
   },

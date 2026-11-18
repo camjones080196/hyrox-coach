@@ -6,6 +6,8 @@ import { blockSummary, fmtDate, fmtDuration, num, parseTime, SESSION_TYPES, time
 import { BlockEditor } from './BlockEditor'
 import { ExercisePicker } from './ExercisePicker'
 import { Icon, TypeTile } from './Icon'
+import { AmrapEditor } from './AmrapEditor'
+import { amrapParts } from '../domain/amrap'
 
 type Mode = 'view' | 'edit' | 'log'
 
@@ -82,8 +84,10 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
         </div>
       )}
 
-      <div className="card">
-        {session.blocks.map((raw, i) => {
+      {blockGroups(session).map((g) => (
+      <div key={g.key} className="card" style={g.accent ? { borderColor: 'var(--accent)' } : undefined}>
+        {g.label && <div className="spread" style={{ marginBottom: 6 }}><span className="eyebrow">{g.label}</span>{g.hint && <span className="tiny muted">{g.hint}</span>}</div>}
+        {g.blocks.map((raw, i) => {
           const b = resolveBlock(raw, athleteId)
           const ex = exerciseById(store, b.exerciseId)
           const otherVersions = others
@@ -115,8 +119,9 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
             </div>
           )
         })}
-        {session.blocks.length === 0 && <p className="muted small">No exercises yet. Tap Edit to add some.</p>}
+        {g.blocks.length === 0 && <p className="muted small">No exercises yet. Tap Edit to add some.</p>}
       </div>
+      ))}
 
       <button className="btn primary block" onClick={onLog}><Icon name={log ? 'edit' : 'check'} size={18} /> {log ? 'Edit log' : 'Log this workout'}</button>
       <div className="row">
@@ -165,20 +170,20 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
       </div>
       <label className="field">
         Workout type
-        <select value={draft.type} onChange={(e) => set('type', e.target.value as SessionType)}>
+        <select value={draft.type} onChange={(e) => {
+          const type = e.target.value as SessionType
+          if (type === 'amrap' && draft.type !== 'amrap') {
+            // Turning a session into an AMRAP: one pass per round, and a default cap.
+            const cap = draft.capMin ?? 15
+            setDraft((d) => ({ ...d, type, capMin: cap, minutes: cap + 15, blocks: d.blocks.map((b) => (b.section ? b : { ...b, sets: 1, restSec: 0 })) }))
+          } else set('type', type)
+        }}>
           {Object.entries(SESSION_TYPES).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
         </select>
       </label>
-      {draft.type === 'amrap' && (
-        <label className="field">
-          AMRAP time cap (minutes)
-          <input type="number" inputMode="numeric" min={1} value={draft.capMin ?? ''} placeholder="e.g. 20" onChange={(e) => set('capMin', num(e.target.value))} />
-          <span className="tiny">Each exercise below is one round's worth. Set sets to 1.</span>
-        </label>
-      )}
       <label className="field">Focus<textarea value={draft.focus} onChange={(e) => set('focus', e.target.value)} style={{ minHeight: 60 }} /></label>
 
-      <h2>Exercises</h2>
+      <h2>{draft.type === 'amrap' ? 'Build the AMRAP' : 'Exercises'}</h2>
       {athletes.length > 1 && (
         <div className="stack-sm">
           <span className="small muted">Exercise changes apply to</span>
@@ -191,7 +196,8 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
           <span className="tiny muted">{scope === 'all' ? 'Changing a value here sets it for everyone.' : 'Only this person\'s version changes. Everyone else keeps theirs.'}</span>
         </div>
       )}
-      {draft.blocks.map((b, i) => (
+      {draft.type === 'amrap' && <AmrapEditor draft={draft} setDraft={setDraft} scope={scope} applyEdit={applyEdit} />}
+      {draft.type !== 'amrap' && draft.blocks.map((b, i) => (
         <BlockEditor
           key={`${b.id}-${scope}`}
           block={scope === 'all' ? b : resolveBlock(b, scope)}
@@ -207,7 +213,7 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
           }}
         />
       ))}
-      <button className="btn block" onClick={() => setAdding(true)}><Icon name="plus" size={18} /> Add exercise</button>
+      {draft.type !== 'amrap' && <button className="btn block" onClick={() => setAdding(true)}><Icon name="plus" size={18} /> Add exercise</button>}
       {adding && (
         <ExercisePicker
           onClose={() => setAdding(false)}
@@ -226,6 +232,17 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
       <button className="btn ghost danger" onClick={() => { if (window.confirm('Delete this session?')) onDelete() }}>Delete session</button>
     </div>
   )
+}
+
+/** Blocks grouped for display: AMRAPs show warm-up, the repeated round and cool-down separately. */
+function blockGroups(session: Session) {
+  if (session.type !== 'amrap') return [{ key: 'all', label: '', hint: '', accent: false, blocks: session.blocks }]
+  const { warmup, round, cooldown } = amrapParts(session.blocks)
+  return [
+    ...(warmup.length ? [{ key: 'w', label: 'Warm-up', hint: 'before the clock starts', accent: false, blocks: warmup }] : []),
+    { key: 'r', label: 'Each round', hint: `repeat for ${session.capMin ?? '?'} min`, accent: true, blocks: round },
+    ...(cooldown.length ? [{ key: 'c', label: 'Cool-down', hint: '', accent: false, blocks: cooldown }] : []),
+  ]
 }
 
 /** The athlete's most recent earlier AMRAP score, as text. */
@@ -303,8 +320,12 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
     const status = isAmrap
       ? (rounds || extraReps ? 'done' : doneCount ? 'partial' : 'skipped')
       : doneCount === 0 ? 'skipped' : doneCount === allSets.length ? 'done' : 'partial'
+    // For an AMRAP, record the weight used for each movement once, as done if any rounds were completed.
+    const logged = isAmrap
+      ? Object.fromEntries(amrapParts(session.blocks).round.map((b) => [b.id, [{ ...(blocks[b.id]?.[0] ?? {}), done: !!(rounds || extraReps) }]]))
+      : blocks
     saveLog(store, {
-      sessionId: session.id, athleteId, status, rpe, notes: notes || undefined, blocks, completedAt: new Date().toISOString(),
+      sessionId: session.id, athleteId, status, rpe, notes: notes || undefined, blocks: logged, completedAt: new Date().toISOString(),
       ...(isAmrap ? { rounds, extraReps } : {}),
     })
     onDone()
@@ -314,23 +335,46 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
     <div className="stack">
       <div className="spread">
         <h1>Log workout{athlete && getAthletes(store).length > 1 ? `: ${athlete.name}` : ''}</h1>
-        <button className="btn small" onClick={() => setBlocks((all) => Object.fromEntries(Object.entries(all).map(([k, v]) => [k, v.map((s) => ({ ...s, done: true }))])))}>
-          <Icon name="check" size={16} /> Tick all
-        </button>
+        {!isAmrap && (
+          <button className="btn small" onClick={() => setBlocks((all) => Object.fromEntries(Object.entries(all).map(([k, v]) => [k, v.map((s) => ({ ...s, done: true }))])))}>
+            <Icon name="check" size={16} /> Tick all
+          </button>
+        )}
       </div>
       <p className="small muted">{isAmrap ? 'Enter your score, and adjust any weights you used.' : 'Targets are filled in. Change anything that was different, then tick each set you did.'}</p>
       {isAmrap && (
         <div className="card stack-sm" style={{ borderColor: 'var(--accent)' }}>
           <div className="row"><Icon name="timer" size={20} /><b>{session.capMin ?? '?'}-minute AMRAP score</b></div>
-          <div className="num-grid">
-            <label className="field">Full rounds<input type="number" inputMode="numeric" min={0} value={rounds ?? ''} onChange={(e) => setRounds(num(e.target.value))} /></label>
-            <label className="field">Extra reps<input type="number" inputMode="numeric" min={0} value={extraReps ?? ''} onChange={(e) => setExtraReps(num(e.target.value))} /></label>
+          <div className="stepper">
+            <button onClick={() => setRounds(Math.max(0, (rounds ?? 0) - 1))} aria-label="One less round">−</button>
+            <div className="val">{rounds ?? 0}<small>Full rounds</small></div>
+            <button onClick={() => setRounds((rounds ?? 0) + 1)} aria-label="One more round">+</button>
           </div>
+          <div className="stepper">
+            <button onClick={() => setExtraReps(Math.max(0, (extraReps ?? 0) - 1))} aria-label="One less rep">−</button>
+            <div className="val" style={{ fontSize: '1.8rem' }}>{extraReps ?? 0}<small>Extra reps into next round</small></div>
+            <button onClick={() => setExtraReps((extraReps ?? 0) + 1)} aria-label="One more rep">+</button>
+          </div>
+          <span className="tiny muted">Tap + after each round during the workout, or enter the total at the end.</span>
           {previousAmrap(store, rawSession, athleteId) && <span className="small muted">Last AMRAP: {previousAmrap(store, rawSession, athleteId)}</span>}
         </div>
       )}
 
-      {session.blocks.map((b) => {
+      {isAmrap && amrapParts(session.blocks).round.some((b) => b.weightKg !== undefined) && (
+        <div className="card stack-sm">
+          <span className="eyebrow">Weights used</span>
+          {amrapParts(session.blocks).round.filter((b) => b.weightKg !== undefined).map((b) => (
+            <div key={b.id} className="spread">
+              <span className="small grow truncate" style={{ fontWeight: 600 }}>{exerciseById(store, b.exerciseId).name}</span>
+              <input type="number" inputMode="decimal" step="0.5" style={{ width: 96, textAlign: 'center', fontWeight: 700 }} aria-label="Weight kg"
+                value={blocks[b.id]?.[0]?.weightKg ?? ''} onChange={(e) => update(b.id, 0, { weightKg: num(e.target.value) })} />
+              <span className="small muted">kg</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isAmrap && session.blocks.map((b) => {
         const ex = exerciseById(store, b.exerciseId)
         const cols = columnsFor(b)
         const sets = blocks[b.id]

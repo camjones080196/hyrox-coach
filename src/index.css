@@ -283,3 +283,16 @@ input[type='checkbox'] { width: 22px; height: 22px; min-height: 0; accent-color:
 .empty { text-align: center; padding: 24px 16px; color: var(--muted); }
 .list { padding: 4px 16px; }
 .list > * + * { border-top: 1px solid var(--line); }
+
+/* AMRAP builder */
+.amrap-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.amrap-row:first-of-type { border-top: none; }
+.amrap-name { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; background: none; border: none; padding: 4px 0; font-weight: 700; cursor: pointer; text-align: left; }
+.amrap-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.template-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 168px; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; margin: 0 -2px; scroll-snap-type: x mandatory; }
+.template { display: flex; flex-direction: column; gap: 4px; padding: 12px; scroll-snap-align: start; min-height: 128px; }
+.stepper { display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 8px; }
+.stepper button { height: 56px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 1.6rem; font-weight: 700; cursor: pointer; }
+.stepper button:active { background: var(--surface-2); }
+.stepper .val { text-align: center; font-size: 2.4rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+.stepper .val small { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
