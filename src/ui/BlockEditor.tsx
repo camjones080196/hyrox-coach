@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { exerciseById, useStore } from '../data/model'
-import { isCardio, type Block } from '../domain/types'
+import { MEASURE_LABEL, measureMode, toMeasure, type MeasureMode } from '../domain/measure'
+import type { Block, Exercise } from '../domain/types'
 import { num, parseTime, timeInput } from '../format'
 import { ExercisePicker } from './ExercisePicker'
 import { Icon } from './Icon'
@@ -19,8 +20,7 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
   const [picking, setPicking] = useState(false)
   const ex = exerciseById(store, block.exerciseId)
   const set = <K extends keyof Block>(k: K, v: Block[K]) => onChange({ ...block, [k]: v })
-  const cardio = isCardio(ex)
-  const mode = cardio ? cardioMode(block) : null
+  const mode = measureMode(block, ex)
 
   return (
     <div className="card stack-sm">
@@ -42,18 +42,20 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
         </div>
       </div>
       <button className="btn small" onClick={() => setPicking(true)}><Icon name="swap" size={16} /> Swap exercise</button>
-      {cardio && <CardioModeSwitch block={block} onChange={onChange} />}
+      <MeasureSwitch block={block} onChange={onChange} ex={ex} />
       <div className="num-grid">
         <label className="field">Sets<input type="number" inputMode="numeric" min={1} value={block.sets} onChange={(e) => set('sets', Math.max(1, num(e.target.value) ?? 1))} /></label>
-        <label className="field">Reps<input type="number" inputMode="numeric" value={block.reps ?? ''} onChange={(e) => set('reps', num(e.target.value))} /></label>
+        {mode === 'reps' && (
+          <label className="field">Reps<input type="number" inputMode="numeric" value={block.reps ?? ''} onChange={(e) => set('reps', num(e.target.value))} /></label>
+        )}
         <label className="field">Weight kg<input type="number" inputMode="decimal" step="0.5" value={block.weightKg ?? ''} onChange={(e) => set('weightKg', num(e.target.value))} /></label>
         {mode === 'calories' && (
           <label className="field">Calories<input type="number" inputMode="numeric" value={block.calories ?? ''} onChange={(e) => set('calories', num(e.target.value))} /></label>
         )}
-        {(mode === null || mode === 'distance') && (
+        {mode === 'distance' && (
           <label className="field">Distance m<input type="number" inputMode="numeric" value={block.distanceM ?? ''} onChange={(e) => set('distanceM', num(e.target.value))} /></label>
         )}
-        {(mode === null || mode === 'time') && (
+        {mode === 'time' && (
           <label className="field">Time m:ss<input key={`t-${block.durationSec ?? ''}`} inputMode="numeric" defaultValue={timeInput(block.durationSec)} onBlur={(e) => set('durationSec', parseTime(e.target.value))} placeholder="e.g. 20 or 1:30" /></label>
         )}
         <label className="field">Rest s<input type="number" inputMode="numeric" value={block.restSec ?? ''} onChange={(e) => set('restSec', num(e.target.value))} /></label>
@@ -74,45 +76,14 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
   )
 }
 
-export type CardioMode = 'distance' | 'calories' | 'time'
-
-/** How a cardio block is measured: calories, distance, or a target time. */
-export function cardioMode(b: Block): CardioMode {
-  if (b.calories !== undefined) return 'calories'
-  if (b.distanceM !== undefined) return 'distance'
-  if (b.durationSec !== undefined) return 'time'
-  return 'distance'
-}
-
-// Rough conversions so switching keeps a sensible target, which can then be edited.
-const M_PER_CAL = 15 // rower, SkiErg or run
-const M_PER_MIN = 225 // steady pace
-
-function metresOf(b: Block): number | undefined {
-  if (b.distanceM !== undefined) return b.distanceM
-  if (b.calories !== undefined) return b.calories * M_PER_CAL
-  if (b.durationSec !== undefined) return (b.durationSec / 60) * M_PER_MIN
-  return undefined
-}
-
-/** Switch a cardio block to a different measure, converting the target. */
-export function toMode(b: Block, mode: CardioMode): Block {
-  if (cardioMode(b) === mode) return b
-  const m = metresOf(b)
-  const { distanceM: _d, calories: _c, durationSec: _t, ...rest } = b
-  if (mode === 'calories') return { ...rest, calories: m ? Math.max(1, Math.round(m / M_PER_CAL)) : 15 }
-  if (mode === 'distance') return { ...rest, distanceM: m ? Math.max(50, Math.round(m / 50) * 50) : 250 }
-  return { ...rest, durationSec: m ? Math.max(30, Math.round(((m / M_PER_MIN) * 60) / 15) * 15) : 60 }
-}
-
-/** Distance / Calories / Time switch for cardio blocks. */
-export function CardioModeSwitch({ block, onChange, distanceLabel = 'Distance' }: { block: Block; onChange: (b: Block) => void; distanceLabel?: string }) {
-  const mode = cardioMode(block)
-  const opts: [CardioMode, string][] = [['distance', distanceLabel], ['calories', 'Calories'], ['time', 'Time']]
+/** Reps / Distance / Calories / Time switch, available for every exercise. */
+export function MeasureSwitch({ block, onChange, ex, distanceLabel = 'Distance' }: { block: Block; onChange: (b: Block) => void; ex?: Pick<Exercise, 'measure'>; distanceLabel?: string }) {
+  const mode = measureMode(block, ex)
+  const opts = (['reps', 'distance', 'calories', 'time'] as MeasureMode[]).map((m) => [m, m === 'distance' ? distanceLabel : MEASURE_LABEL[m]] as const)
   return (
     <div className="seg" role="radiogroup" aria-label="Measure by" style={{ alignSelf: 'flex-start' }}>
       {opts.map(([m, label]) => (
-        <button key={m} role="radio" aria-checked={mode === m} className={mode === m ? 'on' : ''} onClick={() => onChange(toMode(block, m))}>{label}</button>
+        <button key={m} role="radio" aria-checked={mode === m} className={mode === m ? 'on' : ''} onClick={() => onChange(toMeasure(block, m, ex))}>{label}</button>
       ))}
     </div>
   )

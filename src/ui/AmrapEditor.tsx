@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { exerciseById, getAthletes, newId, useStore } from '../data/model'
 import { AMRAP_TEMPLATES, amrapParts, amrapWarmup, buildAmrapRound, type AmrapTemplate } from '../domain/amrap'
 import { resolveBlock } from '../domain/multiAthlete'
-import { isCardio, type Block, type Exercise, type Session } from '../domain/types'
-import { CardioModeSwitch } from './BlockEditor'
+import type { Block, Exercise, Session } from '../domain/types'
+import { MeasureSwitch } from './BlockEditor'
+import { measureMode } from '../domain/measure'
 import { blockSummary, num, parseTime, timeInput } from '../format'
 import { ExercisePicker } from './ExercisePicker'
 import { Icon } from './Icon'
@@ -17,15 +18,8 @@ interface Props {
   applyEdit: (orig: Block, edited: Block, scope: string) => Block
 }
 
-type Field = 'reps' | 'distanceM' | 'calories' | 'durationSec'
 
-function amountField(b: Block, ex: Exercise): Field {
-  if (b.reps !== undefined) return 'reps'
-  if (b.calories !== undefined) return 'calories'
-  if (b.distanceM !== undefined) return 'distanceM'
-  if (b.durationSec !== undefined) return 'durationSec'
-  return ex.measure === 'distance' ? 'distanceM' : ex.measure === 'calories' ? 'calories' : ex.measure === 'time' ? 'durationSec' : 'reps'
-}
+const FIELD_OF = { reps: 'reps', distance: 'distanceM', calories: 'calories', time: 'durationSec' } as const
 
 function defaultsFor(e: Exercise, section: Block['section']): Block {
   const b: Block = { id: newId('b'), exerciseId: e.id, sets: 1, restSec: 0, section }
@@ -178,9 +172,8 @@ interface RowProps {
 function AmrapRow({ v, index, count, onEdit, onSwap, onMove, onRemove, onReplace }: RowProps) {
   const store = useStore()
   const ex = exerciseById(store, v.exerciseId)
-  const field = amountField(v, ex)
+  const field = FIELD_OF[measureMode(v, ex)]
   const label = field === 'reps' ? 'Reps' : field === 'distanceM' ? 'Metres' : field === 'calories' ? 'Calories' : 'Time'
-  const cardio = isCardio(ex) && field !== 'reps'
   return (
     <div className="amrap-row">
       <div className="spread">
@@ -195,7 +188,7 @@ function AmrapRow({ v, index, count, onEdit, onSwap, onMove, onRemove, onReplace
           <button className="icon-btn" onClick={onRemove} aria-label="Remove"><Icon name="trash" size={16} /></button>
         </div>
       </div>
-      {cardio && <CardioModeSwitch block={v} onChange={onReplace} distanceLabel="Metres" />}
+      <MeasureSwitch block={v} onChange={onReplace} ex={ex} distanceLabel="Metres" />
       <div className="amrap-inputs">
         <label className="field">
           {label}
