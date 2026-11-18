@@ -3,7 +3,7 @@ import { exerciseById, getAthletes, newId, useStore } from '../data/model'
 import { AMRAP_TEMPLATES, amrapParts, amrapWarmup, buildAmrapRound, type AmrapTemplate } from '../domain/amrap'
 import { resolveBlock } from '../domain/multiAthlete'
 import { isCardio, type Block, type Exercise, type Session } from '../domain/types'
-import { toCalories, toDistance } from './BlockEditor'
+import { CardioModeSwitch } from './BlockEditor'
 import { blockSummary, num, parseTime, timeInput } from '../format'
 import { ExercisePicker } from './ExercisePicker'
 import { Icon } from './Icon'
@@ -180,7 +180,7 @@ function AmrapRow({ v, index, count, onEdit, onSwap, onMove, onRemove, onReplace
   const ex = exerciseById(store, v.exerciseId)
   const field = amountField(v, ex)
   const label = field === 'reps' ? 'Reps' : field === 'distanceM' ? 'Metres' : field === 'calories' ? 'Calories' : 'Time'
-  const cardio = isCardio(ex) && (field === 'distanceM' || field === 'calories')
+  const cardio = isCardio(ex) && field !== 'reps'
   return (
     <div className="amrap-row">
       <div className="spread">
@@ -195,17 +195,12 @@ function AmrapRow({ v, index, count, onEdit, onSwap, onMove, onRemove, onReplace
           <button className="icon-btn" onClick={onRemove} aria-label="Remove"><Icon name="trash" size={16} /></button>
         </div>
       </div>
-      {cardio && (
-        <div className="seg" role="radiogroup" aria-label="Measure by" style={{ alignSelf: 'flex-start' }}>
-          <button role="radio" aria-checked={field === 'distanceM'} className={field === 'distanceM' ? 'on' : ''} onClick={() => onReplace(toDistance(v))}>Metres</button>
-          <button role="radio" aria-checked={field === 'calories'} className={field === 'calories' ? 'on' : ''} onClick={() => onReplace(toCalories(v))}>Calories</button>
-        </div>
-      )}
+      {cardio && <CardioModeSwitch block={v} onChange={onReplace} distanceLabel="Metres" />}
       <div className="amrap-inputs">
         <label className="field">
           {label}
           {field === 'durationSec' ? (
-            <input inputMode="numeric" placeholder="m:ss" defaultValue={timeInput(v.durationSec)} onBlur={(e) => onEdit({ durationSec: parseTime(e.target.value) })} />
+            <input key={`t-${v.durationSec ?? ''}`} inputMode="numeric" placeholder="m:ss" defaultValue={timeInput(v.durationSec)} onBlur={(e) => onEdit({ durationSec: parseTime(e.target.value) })} />
           ) : (
             <input type="number" inputMode="numeric" value={v[field] ?? ''} onChange={(e) => onEdit({ [field]: num(e.target.value) })} />
           )}
