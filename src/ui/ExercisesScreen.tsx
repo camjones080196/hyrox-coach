@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import { useState } from 'react'
 import { getExercises, newId, useStore } from '../data/model'
 import { EXERCISE_BY_ID } from '../domain/exercises'
@@ -16,8 +17,8 @@ export function ExercisesScreen() {
   return (
     <div className="stack">
       <div className="spread">
-        <h1>Exercises</h1>
-        <button className="btn small primary" onClick={() => setEditing({ id: newId('ex'), name: '', category: 'strength', measure: 'reps', adaptiveFriendly: true })}>＋ New</button>
+        <div className="stack-sm"><h1>Exercises</h1><span className="small muted">Your library. Tap one to edit it or add your own.</span></div>
+        <button className="btn small primary" onClick={() => setEditing({ id: newId('ex'), name: '', category: 'strength', measure: 'reps', adaptiveFriendly: true })}><Icon name="plus" size={16} /> New</button>
       </div>
       <input placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
       {all.map((e) => (

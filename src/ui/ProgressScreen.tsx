@@ -57,7 +57,7 @@ export function ProgressScreen() {
 
   return (
     <div className="stack">
-      <h1>Progress: {athlete.name}</h1>
+      <div className="stack-sm"><h1>Progress</h1><span className="small muted">{athlete.name} · {division.name}</span></div>
       <div className="stats">
         <div className="card stat"><b>{done.length}</b><span className="small muted">sessions done</span></div>
         <div className="card stat"><b>{completion}%</b><span className="small muted">completed</span></div>
@@ -71,10 +71,8 @@ export function ProgressScreen() {
           const pct = Math.min(100, Math.round((r.best / r.race!) * 100))
           return (
             <div key={r.st} className="stack-sm" style={{ gap: 2 }}>
-              <div className="spread small"><span>{STATION_NAMES[r.st]}</span><span className="muted">{r.best || '–'} / {r.race} kg</span></div>
-              <div style={{ height: 8, background: 'var(--surface-2)', borderRadius: 4 }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? 'var(--good)' : 'var(--accent)', borderRadius: 4 }} />
-              </div>
+              <div className="spread small"><span style={{ fontWeight: 600 }}>{STATION_NAMES[r.st]}</span><span className="muted" style={{ fontWeight: 600 }}>{r.best || '–'} / {r.race} kg</span></div>
+              <div className="bar"><div className={pct >= 100 ? 'full' : ''} style={{ width: `${pct}%` }} /></div>
             </div>
           )
         })}

@@ -11,14 +11,15 @@ import { ProgressScreen } from './ui/ProgressScreen'
 import { SessionScreen } from './ui/SessionScreen'
 import { SettingsScreen } from './ui/SettingsScreen'
 import { TodayScreen } from './ui/TodayScreen'
+import { Icon, type IconName } from './ui/Icon'
 
 type Tab = 'today' | 'plan' | 'progress' | 'exercises' | 'settings'
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'today', label: 'Today', icon: '🏠' },
-  { id: 'plan', label: 'Plan', icon: '📅' },
-  { id: 'progress', label: 'Progress', icon: '📈' },
-  { id: 'exercises', label: 'Exercises', icon: '🏋️' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'today', label: 'Today', icon: 'home' },
+  { id: 'plan', label: 'Plan', icon: 'calendar' },
+  { id: 'progress', label: 'Progress', icon: 'chart' },
+  { id: 'exercises', label: 'Exercises', icon: 'dumbbell' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
 ]
 
 const WS_KEY = 'hyrox-coach-workspace'
@@ -135,14 +136,16 @@ function Main({ workspaceId }: { workspaceId?: string }) {
   }
 
   const statusClass = store.backend.mode === 'local' ? 'local' : store.status === 'saving' ? 'saving' : store.status === 'error' ? 'error' : ''
-  const statusText = store.backend.mode === 'local' ? 'This phone only' : store.status === 'saving' ? 'Saving…' : store.status === 'error' ? `Sync error: ${store.error}` : 'Synced'
+  const statusText = store.backend.mode === 'local' ? 'On this phone' : store.status === 'saving' ? 'Saving…' : store.status === 'error' ? 'Sync error' : 'Synced'
 
   return (
     <AthleteContext.Provider value={{ athleteId, setAthleteId }}>
       <div className="app">
         <div className="topbar">
-          <span className={`sync-dot ${statusClass}`} />
-          <span className="tiny muted grow">{statusText}</span>
+          <div className="grow stack-sm" style={{ gap: 2 }}>
+            <span className="brand"><span className="brand-mark">H</span>Hyrox Coach</span>
+            <span className="sync" title={store.error ?? undefined}><span className={`sync-dot ${statusClass}`} />{statusText}</span>
+          </div>
           {athletes.length > 1 && (
             <div className="seg" role="tablist" aria-label="Athlete">
               {athletes.map((a) => (
@@ -169,7 +172,7 @@ function Main({ workspaceId }: { workspaceId?: string }) {
         <div className="nav-inner">
           {TABS.map((t) => (
             <button key={t.id} className={tab === t.id && !sessionId ? 'active' : ''} onClick={() => { setTab(t.id); setSessionId(null) }}>
-              <span className="ico">{t.icon}</span>
+              <span className="pill"><Icon name={t.icon} size={20} strokeWidth={tab === t.id && !sessionId ? 2.4 : 2} /></span>
               {t.label}
             </button>
           ))}

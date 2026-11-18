@@ -4,7 +4,7 @@ export interface Point { date: string; value: number }
 
 /** Minimal line chart for progress over time. */
 export function LineChart({ points, format = (v) => String(v), invert = false }: { points: Point[]; format?: (v: number) => string; invert?: boolean }) {
-  if (points.length === 0) return <p className="small muted">Nothing logged yet.</p>
+  if (points.length === 0) return <div className="card flat empty small">Nothing logged yet. Log a workout to see this chart.</div>
   const W = 320, H = 140, P = { l: 40, r: 10, t: 10, b: 22 }
   const vals = points.map((p) => p.value)
   let min = Math.min(...vals), max = Math.max(...vals)
@@ -18,7 +18,9 @@ export function LineChart({ points, format = (v) => String(v), invert = false }:
   return (
     <div className="chart">
       <svg viewBox={`0 0 ${W} ${H}`} role="img">
+        <line className="grid" x1={P.l} x2={W - P.r} y1={y(max)} y2={y(max)} />
         <line className="axis" x1={P.l} x2={W - P.r} y1={H - P.b} y2={H - P.b} />
+        {points.length > 1 && <path className="area" d={`${d} L${x(points.length - 1).toFixed(1)},${H - P.b} L${x(0).toFixed(1)},${H - P.b} Z`} />}
         <text x={P.l - 4} y={y(max) + 3} textAnchor="end">{format(max)}</text>
         <text x={P.l - 4} y={y(min) + 3} textAnchor="end">{format(min)}</text>
         <text x={x(0)} y={H - 6} textAnchor="start">{fmtDate(points[0].date, { day: 'numeric', month: 'short' })}</text>

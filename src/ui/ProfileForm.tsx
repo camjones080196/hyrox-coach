@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import { useState } from 'react'
 import { DIVISIONS, STATION_NAMES, STATION_ORDER } from '../domain/standards'
 import { mondayOf } from '../domain/dates'
@@ -91,7 +92,7 @@ export function PlanForm({ initialSettings, initialAthletes, submitLabel, onSubm
           </label>
         </div>
       ))}
-      <button type="button" className="btn small" onClick={() => setAthletes([...athletes, { id: newId('ath'), name: '', division: 'men_open', level: 'intermediate' }])}>＋ Add athlete</button>
+      <button type="button" className="btn small" onClick={() => setAthletes([...athletes, { id: newId('ath'), name: '', division: 'men_open', level: 'intermediate' }])}><Icon name="plus" size={16} /> Add athlete</button>
       <span className="tiny muted">Beginner: new to this kind of training. Intermediate: trains regularly. Advanced: has raced or trains hard 4+ days a week.</span>
       {!namesOk && <span className="small" style={{ color: 'var(--warn)' }}>Give every athlete a name.</span>}
 

@@ -3,6 +3,7 @@ import { exerciseById, useStore } from '../data/model'
 import type { Block } from '../domain/types'
 import { num, parseTime, timeInput } from '../format'
 import { ExercisePicker } from './ExercisePicker'
+import { Icon } from './Icon'
 
 interface Props {
   block: Block
@@ -27,12 +28,18 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
           <b className="grow">{ex.name}</b>
         </div>
         <div className="row" style={{ gap: 0 }}>
-          <button className="icon-btn" disabled={index === 0} onClick={() => onMove(-1)} aria-label="Move up">↑</button>
-          <button className="icon-btn" disabled={index === count - 1} onClick={() => onMove(1)} aria-label="Move down">↓</button>
-          <button className="icon-btn" onClick={onRemove} aria-label="Remove">🗑</button>
+          <button className="icon-btn" disabled={index === 0} onClick={() => onMove(-1)} aria-label="Move up">
+            <Icon name="up" size={18} />
+          </button>
+          <button className="icon-btn" disabled={index === count - 1} onClick={() => onMove(1)} aria-label="Move down">
+            <Icon name="down" size={18} />
+          </button>
+          <button className="icon-btn" onClick={onRemove} aria-label="Remove">
+            <Icon name="trash" size={18} />
+          </button>
         </div>
       </div>
-      <button className="btn small" onClick={() => setPicking(true)}>⇄ Swap exercise</button>
+      <button className="btn small" onClick={() => setPicking(true)}><Icon name="swap" size={16} /> Swap exercise</button>
       <div className="num-grid">
         <label className="field">Sets<input type="number" inputMode="numeric" min={1} value={block.sets} onChange={(e) => set('sets', Math.max(1, num(e.target.value) ?? 1))} /></label>
         <label className="field">Reps<input type="number" inputMode="numeric" value={block.reps ?? ''} onChange={(e) => set('reps', num(e.target.value))} /></label>

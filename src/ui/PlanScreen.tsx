@@ -4,6 +4,7 @@ import { addDays, mondayOf } from '../domain/dates'
 import type { Block, BlockOverride, PlanWeek, Session } from '../domain/types'
 import { fmtDate, PHASE_NAMES } from '../format'
 import { SessionCard } from './TodayScreen'
+import { Icon } from './Icon'
 
 const DAY = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -31,10 +32,30 @@ export function PlanScreen({ onOpen }: { onOpen: (id: string) => void }) {
   const current = weeks.find((w) => w.startDate === mondayOf(today()))?.week ?? weeks[0]?.week
   const [open, setOpen] = useState<number | undefined>(current)
 
+  const PHASE_COLOR: Record<string, string> = { base: 'var(--base)', build: 'var(--build)', specific: 'var(--specific)', taper: 'var(--taper)', race: 'var(--accent)' }
+  const phases = (['base', 'build', 'specific', 'taper'] as const).filter((p) => weeks.some((w) => w.phase === p))
+
   return (
     <div className="stack">
-      <h1>Plan</h1>
-      <p className="small muted">Tap a week to see its sessions. Tap a session to edit, swap exercises, move it or log it.</p>
+      <div className="stack-sm">
+        <h1>Plan</h1>
+        <p className="small muted">Tap a week to open it, then a session to edit, swap exercises, move or log it.</p>
+      </div>
+      {weeks.length > 0 && (
+        <div className="card stack-sm">
+          <div className="spread"><span className="eyebrow">Road to race day</span><span className="tiny muted">{weeks.length} weeks</span></div>
+          <div className="timeline">
+            {weeks.map((w) => (
+              <div key={w.week} className={w.week === current ? 'now' : ''} style={{ flex: 1, background: PHASE_COLOR[w.phase], opacity: w.deload ? 0.45 : 1 }} title={`Week ${w.week}`} />
+            ))}
+          </div>
+          <div className="legend">
+            {phases.map((p) => <span key={p}><i style={{ background: PHASE_COLOR[p] }} />{PHASE_NAMES[p]}</span>)}
+            <span><i style={{ background: 'var(--accent)' }} />Race</span>
+            <span><i style={{ background: 'var(--muted)', opacity: 0.45 }} />Easier week</span>
+          </div>
+        </div>
+      )}
       {weeks.map((w) => (
         <WeekCard key={w.week} w={w} sessions={sessions.filter((s) => s.date >= w.startDate && s.date < addDays(w.startDate, 7))} open={open === w.week} current={current === w.week} onToggle={() => setOpen(open === w.week ? undefined : w.week)} onOpen={onOpen} />
       ))}
@@ -64,17 +85,23 @@ function WeekCard({ w, sessions, open, current, onToggle, onOpen }: { w: PlanWee
   }
 
   return (
-    <div className={`card stack-sm ${current ? 'today' : ''}`}>
-      <button className="spread" onClick={onToggle} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
-        <div className="stack-sm" style={{ gap: 2 }}>
-          <b>Week {w.week} · {fmtDate(w.startDate, { day: 'numeric', month: 'short' })}</b>
-          <div className="row-wrap">
+    <div className={`card stack-sm week-card ${current ? 'current' : ''}`}>
+      <button className="week-head" onClick={onToggle} aria-expanded={open}>
+        <div className="stack-sm" style={{ gap: 4 }}>
+          <div className="row" style={{ gap: 8 }}>
+            <h3>Week {w.week}</h3>
+            <span className="small muted">{fmtDate(w.startDate, { day: 'numeric', month: 'short' })} – {fmtDate(addDays(w.startDate, 6), { day: 'numeric', month: 'short' })}</span>
+          </div>
+          <div className="row-wrap" style={{ gap: 6 }}>
             <span className={`chip ${w.phase}`}>{PHASE_NAMES[w.phase]}</span>
             {w.deload && <span className="chip">Easier week</span>}
-            {current && <span className="chip warn">This week</span>}
+            {current && <span className="chip accent">This week</span>}
           </div>
         </div>
-        <span className="small muted">{done}/{sessions.length} {open ? '▴' : '▾'}</span>
+        <div className="row" style={{ gap: 6 }}>
+          <span className="small muted" style={{ fontWeight: 700 }}>{done}/{sessions.length}</span>
+          <span style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-grid' }}><Icon name="chevronDown" size={18} className="muted" /></span>
+        </div>
       </button>
       <div className="week-strip">
         {DAY.map((d, i) => {
@@ -82,16 +109,16 @@ function WeekCard({ w, sessions, open, current, onToggle, onOpen }: { w: PlanWee
           const s = sessions.filter((x) => x.date === date)
           const logged = s.length > 0 && s.every((x) => { const l = getLog(store, x.id, athleteId); return l && l.status !== 'skipped' })
           const miss = s.length > 0 && date < t && !logged
-          return <div key={i} className={`d ${s.length ? 'has' : ''} ${logged ? 'done' : miss ? 'miss' : ''}`}>{d}</div>
+          return <div key={i} className={`d ${s.length ? 'has' : ''} ${logged ? 'done' : miss ? 'miss' : ''} ${date === t ? 'today' : ''}`}>{d}</div>
         })}
       </div>
       {open && (
         <div className="stack-sm" style={{ marginTop: 6 }}>
           {sessions.map((s) => <SessionCard key={s.id} s={s} onOpen={() => onOpen(s.id)} />)}
           <div className="row-wrap">
-            <button className="btn small" onClick={addSession}>＋ Add session</button>
-            <button className="btn small" onClick={() => scaleWeek(0.8)}>Make easier (−20%)</button>
-            <button className="btn small" onClick={() => scaleWeek(1.1)}>Make harder (+10%)</button>
+            <button className="btn small" onClick={addSession}><Icon name="plus" size={16} /> Add session</button>
+            <button className="btn small" onClick={() => scaleWeek(0.8)}>Easier −20%</button>
+            <button className="btn small" onClick={() => scaleWeek(1.1)}>Harder +10%</button>
           </div>
           <span className="tiny muted">Easier/harder changes sets, reps, distances and times on this week's upcoming sessions. Weights stay the same. Applies to everyone.</span>
         </div>

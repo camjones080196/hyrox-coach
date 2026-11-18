@@ -5,6 +5,7 @@ import { OVERRIDE_FIELDS, type Block, type BlockOverride, type Session, type Ses
 import { blockSummary, fmtDate, fmtDuration, num, parseTime, SESSION_TYPES, timeInput } from '../format'
 import { BlockEditor } from './BlockEditor'
 import { ExercisePicker } from './ExercisePicker'
+import { Icon, TypeTile } from './Icon'
 
 type Mode = 'view' | 'edit' | 'log'
 
@@ -16,7 +17,7 @@ export function SessionScreen({ id, onBack }: { id: string; onBack: () => void }
   if (!session) {
     return (
       <div className="stack">
-        <button className="btn ghost" onClick={onBack}>‹ Back</button>
+        <button className="back" onClick={onBack}><Icon name="chevronLeft" size={18} /> Back</button>
         <p className="muted">This session was deleted.</p>
       </div>
     )
@@ -26,8 +27,8 @@ export function SessionScreen({ id, onBack }: { id: string; onBack: () => void }
   return (
     <div className="stack">
       <div className="spread">
-        <button className="btn ghost small" onClick={mode === 'view' ? onBack : () => setMode('view')}>‹ {mode === 'view' ? 'Back' : 'Cancel'}</button>
-        <span className="small muted">{fmtDate(session.date, { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+        <button className="back" onClick={mode === 'view' ? onBack : () => setMode('view')}><Icon name="chevronLeft" size={18} /> {mode === 'view' ? 'Back' : 'Cancel'}</button>
+        <span className="small muted" style={{ fontWeight: 600 }}>{fmtDate(session.date, { weekday: 'long', day: 'numeric', month: 'long' })}</span>
       </div>
       {mode === 'view' && <SessionView session={session} log={log} onEdit={() => setMode('edit')} onLog={() => setMode('log')} />}
       {mode === 'edit' && (
@@ -53,17 +54,19 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
   const t = SESSION_TYPES[session.type]
   return (
     <>
-      <div className="stack-sm">
-        <span className="chip">{t.icon} {t.name}</span>
-        <h1>{session.title}</h1>
-        <p className="muted">{session.focus}</p>
-        <p className="small muted">About {session.minutes} min</p>
+      <div className="row" style={{ alignItems: 'flex-start', gap: 14 }}>
+        <TypeTile type={session.type} size={52} />
+        <div className="stack-sm grow" style={{ gap: 4 }}>
+          <h1>{session.title}</h1>
+          <div className="small muted" style={{ fontWeight: 600 }}>{session.title !== t.name ? `${t.name} · ` : ''}about {session.minutes} min · {session.blocks.length} exercises</div>
+        </div>
       </div>
+      {session.focus && <p className="muted">{session.focus}</p>}
 
       {log && (
-        <div className={`card ${log.status === 'skipped' ? 'skipped' : 'done'} stack-sm`}>
+        <div className="card stack-sm" style={{ borderLeft: `4px solid ${log.status === 'skipped' ? 'var(--muted)' : 'var(--good)'}` }}>
           <div className="spread">
-            <b>{log.status === 'done' ? '✓ Completed' : log.status === 'partial' ? '◐ Partly done' : 'Skipped'}</b>
+            <b className="row" style={{ gap: 6 }}>{log.status !== 'skipped' && <span className={`status ${log.status}`}><Icon name="check" size={14} strokeWidth={3} /></span>}{log.status === 'done' ? 'Completed' : log.status === 'partial' ? 'Partly done' : 'Skipped'}</b>
             {log.rpe && <span className="chip">Effort {log.rpe}/10</span>}
           </div>
           {log.notes && <p className="small">{log.notes}</p>}
@@ -82,9 +85,9 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
             <div key={b.id} className="block-row">
               <span className="block-idx">{i + 1}</span>
               <div className="grow stack-sm" style={{ gap: 2 }}>
-                <div className="spread">
+                <div className="spread" style={{ alignItems: 'flex-start' }}>
                   <b>{ex.name}</b>
-                  <span className="small">{blockSummary(b)}</span>
+                  <span className="block-amount">{blockSummary(b)}</span>
                 </div>
                 {(b.restSec || b.targetRpe) && (
                   <span className="tiny muted">
@@ -96,9 +99,9 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
                 {b.notes && <span className="small">{b.notes}</span>}
                 {ex.notes && <span className="tiny muted">{ex.notes}</span>}
                 {otherVersions.map(({ a, ob }) => (
-                  <span key={a.id} className="tiny muted">{a.name}: {ob.exerciseId !== b.exerciseId ? `${exerciseById(store, ob.exerciseId).name}, ` : ''}{blockSummary(ob)}</span>
+                  <span key={a.id} className="other-version">{a.name}: {ob.exerciseId !== b.exerciseId ? `${exerciseById(store, ob.exerciseId).name}, ` : ''}{blockSummary(ob)}</span>
                 ))}
-                {logged && logged.length > 0 && <span className="tiny" style={{ color: 'var(--good)' }}>Logged: {logged.map((s) => blockSummary({ sets: 1, ...s })).join(', ')}</span>}
+                 {logged && logged.length > 0 && <span className="tiny" style={{ color: 'var(--good)', fontWeight: 600 }}>✓ Logged: {logged.map((s) => blockSummary({ sets: 1, ...s })).join(', ')}</span>}
               </div>
             </div>
           )
@@ -106,10 +109,10 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
         {session.blocks.length === 0 && <p className="muted small">No exercises yet. Tap Edit to add some.</p>}
       </div>
 
-      <button className="btn primary block" onClick={onLog}>{log ? 'Edit log' : 'Log this workout'}</button>
+      <button className="btn primary block" onClick={onLog}><Icon name={log ? 'edit' : 'check'} size={18} /> {log ? 'Edit log' : 'Log this workout'}</button>
       <div className="row">
-        <button className="btn grow" onClick={onEdit}>✎ Edit workout</button>
-        <button className="btn grow" onClick={() => setMoving(!moving)}>📅 Move</button>
+        <button className="btn grow" onClick={onEdit}><Icon name="edit" size={18} /> Edit workout</button>
+        <button className="btn grow" onClick={() => setMoving(!moving)}><Icon name="calendar" size={18} /> Move</button>
       </div>
       {moving && (
         <div className="card stack-sm">
@@ -154,7 +157,7 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
       <label className="field">
         Workout type
         <select value={draft.type} onChange={(e) => set('type', e.target.value as SessionType)}>
-          {Object.entries(SESSION_TYPES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.name}</option>)}
+          {Object.entries(SESSION_TYPES).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
         </select>
       </label>
       <label className="field">Focus<textarea value={draft.focus} onChange={(e) => set('focus', e.target.value)} style={{ minHeight: 60 }} /></label>
@@ -188,7 +191,7 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
           }}
         />
       ))}
-      <button className="btn block" onClick={() => setAdding(true)}>＋ Add exercise</button>
+      <button className="btn block" onClick={() => setAdding(true)}><Icon name="plus" size={18} /> Add exercise</button>
       {adding && (
         <ExercisePicker
           onClose={() => setAdding(false)}
@@ -277,7 +280,7 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
       <div className="spread">
         <h1>Log workout{athlete && getAthletes(store).length > 1 ? `: ${athlete.name}` : ''}</h1>
         <button className="btn small" onClick={() => setBlocks((all) => Object.fromEntries(Object.entries(all).map(([k, v]) => [k, v.map((s) => ({ ...s, done: true }))])))}>
-          Tick all
+          <Icon name="check" size={16} /> Tick all
         </button>
       </div>
       <p className="small muted">Targets are filled in. Change anything that was different, then tick each set you did.</p>
@@ -295,10 +298,10 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
             <div className="set-row tiny muted" style={{ ['--cols' as string]: cols.length }}>
               <span>Set</span>
               {cols.map((c) => <span key={c} className="center">{COL_LABEL[c]}</span>)}
-              <span>✓</span>
+              <span className="center">Done</span>
             </div>
             {sets.map((s, i) => (
-              <div key={i} className="set-row" style={{ ['--cols' as string]: cols.length }}>
+              <div key={i} className={`set-row ${s.done ? 'done' : ''}`} style={{ ['--cols' as string]: cols.length }}>
                 <span className="small muted center">{i + 1}</span>
                 {cols.map((c) =>
                   c === 'durationSec' ? (
@@ -307,12 +310,14 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
                     <input key={c} type="number" inputMode="decimal" value={s[c] ?? ''} onChange={(e) => update(b.id, i, { [c]: num(e.target.value) })} />
                   ),
                 )}
-                <input type="checkbox" checked={s.done} onChange={(e) => update(b.id, i, { done: e.target.checked })} aria-label={`Set ${i + 1} done`} />
+                <button type="button" className={`set-check ${s.done ? 'on' : ''}`} onClick={() => update(b.id, i, { done: !s.done })} aria-pressed={s.done} aria-label={`Set ${i + 1} done`}>
+                  <Icon name="check" size={18} strokeWidth={3} />
+                </button>
               </div>
             ))}
             <div className="row">
-              <button className="btn small ghost" onClick={() => setBlocks((all) => ({ ...all, [b.id]: [...all[b.id], { ...(all[b.id].at(-1) ?? { done: false }), done: false }] }))}>＋ Set</button>
-              {sets.length > 1 && <button className="btn small ghost" onClick={() => setBlocks((all) => ({ ...all, [b.id]: all[b.id].slice(0, -1) }))}>－ Set</button>}
+              <button className="btn small ghost" onClick={() => setBlocks((all) => ({ ...all, [b.id]: [...all[b.id], { ...(all[b.id].at(-1) ?? { done: false }), done: false }] }))}><Icon name="plus" size={16} /> Set</button>
+              {sets.length > 1 && <button className="btn small ghost" onClick={() => setBlocks((all) => ({ ...all, [b.id]: all[b.id].slice(0, -1) }))}>Remove set</button>}
             </div>
           </div>
         )
@@ -320,11 +325,12 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
 
       <div className="stack-sm">
         <span className="small muted">How hard was it overall? (1 easy, 10 flat out)</span>
-        <div className="toggle-group">
+        <div className="rpe-grid">
           {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-            <button key={n} className={`toggle ${rpe === n ? 'on' : ''}`} onClick={() => setRpe(n)} style={{ minWidth: 40 }}>{n}</button>
+            <button key={n} className={`toggle ${rpe === n ? 'on' : ''}`} onClick={() => setRpe(n)}>{n}</button>
           ))}
         </div>
+        <div className="spread tiny muted"><span>Easy</span><span>Flat out</span></div>
       </div>
       <label className="field">Notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How did it feel? Any pain or issues?" /></label>
       <button className="btn primary block" onClick={save}>Save log ({doneCount}/{allSets.length} sets)</button>
