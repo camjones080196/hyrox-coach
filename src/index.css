@@ -22,6 +22,7 @@
   --t-strength: #8b5cf6;
   --t-stations: #ea7317;
   --t-hybrid: #0d9488;
+  --t-amrap: #ca8a04;
   --t-simulation: #e11d48;
   --t-recovery: #16a34a;
   --t-race: #c99700;
@@ -55,6 +56,7 @@
     --t-strength: #a78bfa;
     --t-stations: #fb923c;
     --t-hybrid: #2dd4bf;
+    --t-amrap: #facc15;
     --t-simulation: #fb7185;
     --t-recovery: #4ade80;
     --t-race: #ffd21f;
@@ -200,6 +202,7 @@ input[type='checkbox'] { width: 22px; height: 22px; min-height: 0; accent-color:
 .t-strength { --tc: var(--t-strength); }
 .t-stations { --tc: var(--t-stations); }
 .t-hybrid { --tc: var(--t-hybrid); }
+.t-amrap { --tc: var(--t-amrap); }
 .t-simulation { --tc: var(--t-simulation); }
 .t-recovery { --tc: var(--t-recovery); }
 .t-race { --tc: var(--t-race); }

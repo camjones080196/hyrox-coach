@@ -62,6 +62,12 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
         </div>
       </div>
       {session.focus && <p className="muted">{session.focus}</p>}
+      {session.type === 'amrap' && (
+        <div className="notice row" style={{ gap: 10 }}>
+          <span style={{ flexShrink: 0, display: 'inline-grid' }}><Icon name="timer" size={22} /></span>
+          <span><b>{session.capMin ?? '?'}-minute AMRAP.</b> Repeat the exercises below in order, as many rounds as you can before time runs out.</span>
+        </div>
+      )}
 
       {log && (
         <div className="card stack-sm" style={{ borderLeft: `4px solid ${log.status === 'skipped' ? 'var(--muted)' : 'var(--good)'}` }}>
@@ -69,6 +75,9 @@ function SessionView({ session, log, onEdit, onLog }: { session: Session; log?: 
             <b className="row" style={{ gap: 6 }}>{log.status !== 'skipped' && <span className={`status ${log.status}`}><Icon name="check" size={14} strokeWidth={3} /></span>}{log.status === 'done' ? 'Completed' : log.status === 'partial' ? 'Partly done' : 'Skipped'}</b>
             {log.rpe && <span className="chip">Effort {log.rpe}/10</span>}
           </div>
+          {session.type === 'amrap' && log.rounds !== undefined && (
+            <p style={{ fontWeight: 800, fontSize: '1.25rem' }}>Score: {log.rounds} rounds{log.extraReps ? ` + ${log.extraReps} reps` : ''}</p>
+          )}
           {log.notes && <p className="small">{log.notes}</p>}
         </div>
       )}
@@ -160,6 +169,13 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
           {Object.entries(SESSION_TYPES).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
         </select>
       </label>
+      {draft.type === 'amrap' && (
+        <label className="field">
+          AMRAP time cap (minutes)
+          <input type="number" inputMode="numeric" min={1} value={draft.capMin ?? ''} placeholder="e.g. 20" onChange={(e) => set('capMin', num(e.target.value))} />
+          <span className="tiny">Each exercise below is one round's worth. Set sets to 1.</span>
+        </label>
+      )}
       <label className="field">Focus<textarea value={draft.focus} onChange={(e) => set('focus', e.target.value)} style={{ minHeight: 60 }} /></label>
 
       <h2>Exercises</h2>
@@ -212,6 +228,17 @@ function SessionEdit({ session, onDone, onDelete }: { session: Session; onDone: 
   )
 }
 
+/** The athlete's most recent earlier AMRAP score, as text. */
+function previousAmrap(store: ReturnType<typeof useStore>, session: Session, athleteId: string): string | null {
+  const prev = getSessions(store)
+    .filter((s) => s.type === 'amrap' && s.id !== session.id && s.date <= session.date)
+    .map((s) => ({ s, l: getLog(store, s.id, athleteId) }))
+    .filter((x) => x.l?.rounds !== undefined)
+    .at(-1)
+  if (!prev) return null
+  return `${prev.l!.rounds} rounds${prev.l!.extraReps ? ` + ${prev.l!.extraReps} reps` : ''} (${prev.s.capMin} min, ${fmtDate(prev.s.date, { day: 'numeric', month: 'short' })})`
+}
+
 /** Apply an edited block either to everyone or as one athlete's override. */
 function applyEdit(orig: Block, edited: Block, scope: string): Block {
   if (scope === 'all') {
@@ -262,6 +289,9 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
   )
   const [rpe, setRpe] = useState<number | undefined>(existing?.rpe)
   const [notes, setNotes] = useState(existing?.notes ?? '')
+  const isAmrap = session.type === 'amrap'
+  const [rounds, setRounds] = useState<number | undefined>(existing?.rounds)
+  const [extraReps, setExtraReps] = useState<number | undefined>(existing?.extraReps)
 
   const update = (bid: string, i: number, patch: Partial<SetLog>) =>
     setBlocks((all) => ({ ...all, [bid]: all[bid].map((s, j) => (j === i ? { ...s, ...patch } : s)) }))
@@ -270,8 +300,13 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
   const doneCount = allSets.filter((s) => s.done).length
 
   const save = () => {
-    const status = doneCount === 0 ? 'skipped' : doneCount === allSets.length ? 'done' : 'partial'
-    saveLog(store, { sessionId: session.id, athleteId, status, rpe, notes: notes || undefined, blocks, completedAt: new Date().toISOString() })
+    const status = isAmrap
+      ? (rounds || extraReps ? 'done' : doneCount ? 'partial' : 'skipped')
+      : doneCount === 0 ? 'skipped' : doneCount === allSets.length ? 'done' : 'partial'
+    saveLog(store, {
+      sessionId: session.id, athleteId, status, rpe, notes: notes || undefined, blocks, completedAt: new Date().toISOString(),
+      ...(isAmrap ? { rounds, extraReps } : {}),
+    })
     onDone()
   }
 
@@ -283,7 +318,17 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
           <Icon name="check" size={16} /> Tick all
         </button>
       </div>
-      <p className="small muted">Targets are filled in. Change anything that was different, then tick each set you did.</p>
+      <p className="small muted">{isAmrap ? 'Enter your score, and adjust any weights you used.' : 'Targets are filled in. Change anything that was different, then tick each set you did.'}</p>
+      {isAmrap && (
+        <div className="card stack-sm" style={{ borderColor: 'var(--accent)' }}>
+          <div className="row"><Icon name="timer" size={20} /><b>{session.capMin ?? '?'}-minute AMRAP score</b></div>
+          <div className="num-grid">
+            <label className="field">Full rounds<input type="number" inputMode="numeric" min={0} value={rounds ?? ''} onChange={(e) => setRounds(num(e.target.value))} /></label>
+            <label className="field">Extra reps<input type="number" inputMode="numeric" min={0} value={extraReps ?? ''} onChange={(e) => setExtraReps(num(e.target.value))} /></label>
+          </div>
+          {previousAmrap(store, rawSession, athleteId) && <span className="small muted">Last AMRAP: {previousAmrap(store, rawSession, athleteId)}</span>}
+        </div>
+      )}
 
       {session.blocks.map((b) => {
         const ex = exerciseById(store, b.exerciseId)
@@ -333,7 +378,7 @@ function SessionLogForm({ session: rawSession, existing, onDone }: { session: Se
         <div className="spread tiny muted"><span>Easy</span><span>Flat out</span></div>
       </div>
       <label className="field">Notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How did it feel? Any pain or issues?" /></label>
-      <button className="btn primary block" onClick={save}>Save log ({doneCount}/{allSets.length} sets)</button>
+      <button className="btn primary block" onClick={save}>{isAmrap ? 'Save score' : `Save log (${doneCount}/${allSets.length} sets)`}</button>
     </div>
   )
 }

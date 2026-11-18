@@ -70,6 +70,15 @@ describe('generatePlan', () => {
     expect(plan.sessions.some((s) => s.type === 'simulation')).toBe(true)
   })
 
+  it('includes timed AMRAPs in the build phase', () => {
+    const amraps = plan.sessions.filter((s) => s.type === 'amrap')
+    expect(amraps.length).toBeGreaterThan(0)
+    for (const a of amraps) {
+      expect(a.capMin).toBeGreaterThan(0)
+      expect(plan.weeks.find((w) => w.week === a.week)!.phase).toBe('build')
+    }
+  })
+
   it('handles every days-per-week setting', () => {
     for (let d = 2; d <= 6; d++) {
       const p = generatePlan({ ...profile, daysPerWeek: d, trainingDays: [0, 1, 2, 3, 4, 5].slice(0, d) })

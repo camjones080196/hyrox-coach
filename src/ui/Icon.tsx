@@ -46,6 +46,7 @@ export const TYPE_ICON: Record<SessionType, IconName> = {
   strength: 'dumbbell',
   stations: 'sled',
   hybrid: 'repeat',
+  amrap: 'bolt',
   simulation: 'timer',
   recovery: 'leaf',
   race: 'flag',

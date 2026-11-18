@@ -88,7 +88,7 @@ export type AthleteProfile = PlanSettings & Omit<Athlete, 'id'>
 
 export type Phase = 'base' | 'build' | 'specific' | 'taper' | 'race'
 
-export type SessionType = 'run' | 'stations' | 'strength' | 'hybrid' | 'simulation' | 'recovery' | 'race'
+export type SessionType = 'run' | 'stations' | 'strength' | 'hybrid' | 'amrap' | 'simulation' | 'recovery' | 'race'
 
 export interface Block {
   id: string
@@ -122,6 +122,8 @@ export interface Session {
   blocks: Block[]
   /** Estimated minutes. */
   minutes: number
+  /** AMRAP time cap in minutes: as many rounds as possible of the blocks. */
+  capMin?: number
 }
 
 export interface PlanWeek {

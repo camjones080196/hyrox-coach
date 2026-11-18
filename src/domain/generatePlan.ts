@@ -212,6 +212,25 @@ const BUILDERS: Record<SessionType, Builder> = {
     }
   },
 
+  amrap: (ctx, sid) => {
+    const cap = ctx.profile.level === 'beginner' ? 15 : ctx.profile.level === 'intermediate' ? 18 : 20
+    const runM = Math.max(100, Math.round(Math.min(ctx.division.runLegM, 400) / 2 / 25) * 25)
+    const one = { ...ctx, volume: 1 }
+    return {
+      type: 'amrap',
+      title: `${cap}-minute station AMRAP`,
+      focus: 'Steady pace and good form. Log your score and try to beat it next time.',
+      minutes: cap + 20,
+      capMin: cap,
+      blocks: [
+        legBlock(one, `${sid}-b1`, 1, { sets: 1, distanceM: runM, exerciseId: 'run_compromised', restSec: 0, notes: undefined }),
+        stationBlock(one, `${sid}-b2`, 'wall_balls', 0.15, 1, { restSec: 0 }),
+        stationBlock(one, `${sid}-b3`, 'farmers_carry', 0.25, 1, { restSec: 0 }),
+        stationBlock(one, `${sid}-b4`, 'sandbag_lunge', 0.2, 1, { restSec: 0 }),
+      ],
+    }
+  },
+
   simulation: (ctx, sid) => {
     const half = ctx.phaseWeek % 2 === 0
     const stations = half ? STATION_ORDER.slice(0, 4) : STATION_ORDER.slice(4)
@@ -260,6 +279,11 @@ function weekTypes(profile: AthleteProfile, week: PlanWeek, phaseWeek: number): 
     // Swap the hybrid (or the last session) for a race simulation.
     const i = types.lastIndexOf('hybrid')
     types[i >= 0 ? i : types.length - 1] = 'simulation'
+  }
+  if (week.phase === 'build' && !week.deload && phaseWeek % 2 === 1) {
+    // Every other build week, the run + stations session becomes an AMRAP.
+    const i = types.lastIndexOf('hybrid')
+    if (i >= 0) types[i] = 'amrap'
   }
   if (week.phase === 'taper' && phaseWeek === 0 && days >= 3) {
     types[types.length - 1] = 'simulation'

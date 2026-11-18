@@ -10,6 +10,7 @@ export const SESSION_TYPES: Record<SessionType, { name: string; icon: string }> 
   strength: { name: 'Strength', icon: '🏋️' },
   stations: { name: 'Stations', icon: '🛷' },
   hybrid: { name: 'Run + stations', icon: '🔁' },
+  amrap: { name: 'AMRAP', icon: '⚡' },
   simulation: { name: 'Simulation', icon: '⏱️' },
   recovery: { name: 'Recovery', icon: '🧘' },
   race: { name: 'Race', icon: '🏁' },

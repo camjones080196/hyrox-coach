@@ -20,6 +20,9 @@ export interface SessionLog {
   status: 'done' | 'partial' | 'skipped'
   /** Overall effort, 1-10. */
   rpe?: number
+  /** AMRAP score: full rounds plus extra reps into the next round. */
+  rounds?: number
+  extraReps?: number
   notes?: string
   /** Per block id, one entry per set. */
   blocks: Record<string, SetLog[]>
