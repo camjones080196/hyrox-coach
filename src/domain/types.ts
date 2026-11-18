@@ -110,9 +110,9 @@ export interface Block {
   athletes?: Record<string, BlockOverride>
 }
 
-/** Cardio machines that can be measured in calories instead of distance. */
+/** Cardio (running, ergs, bikes) that can be measured in calories instead of distance. */
 export function isCardio(e: Pick<Exercise, 'category'>) {
-  return e.category === 'erg' || e.category === 'conditioning'
+  return e.category === 'run' || e.category === 'erg' || e.category === 'conditioning'
 }
 
 export type BlockOverride = Partial<Pick<Block, 'exerciseId' | 'sets' | 'reps' | 'distanceM' | 'calories' | 'durationSec' | 'weightKg' | 'restSec' | 'targetRpe' | 'notes'>>

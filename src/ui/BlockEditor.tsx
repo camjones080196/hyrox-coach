@@ -76,7 +76,7 @@ export function BlockEditor({ block, index, count, onChange, onRemove, onMove }:
   )
 }
 
-/** Rough metres-to-calories conversion so switching keeps a sensible target (~15 m per calorie on a rower or SkiErg). */
+/** Rough metres-to-calories conversion so switching keeps a sensible target (~15 m per calorie on a rower, SkiErg or run). */
 const M_PER_CAL = 15
 
 export function toCalories(b: Block): Block {
