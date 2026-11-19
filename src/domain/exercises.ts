@@ -4,6 +4,7 @@ import type { Exercise } from './types'
 // defaults the plan generator draws from. Ids are stable so logs keep working.
 export const EXERCISES: Exercise[] = [
   // Running / locomotion
+  { id: 'run', name: 'Run', category: 'run', measure: 'distance', notes: 'A normal run at whatever pace the session calls for.', alternatives: ['run_easy', 'bike_easy', 'row'] },
   { id: 'run_easy', name: 'Easy run / walk-run', category: 'run', measure: 'time', notes: 'Conversational effort. Walk breaks are fine.', alternatives: ['bike_easy', 'row_easy'], adaptiveFriendly: true },
   { id: 'run_intervals', name: 'Run intervals', category: 'run', measure: 'distance', notes: 'Run each rep at race effort, walk recovery.', alternatives: ['bike_intervals', 'run_easy'] },
   { id: 'run_compromised', name: 'Compromised run (after station)', category: 'run', measure: 'distance', notes: 'Run straight off a station to practise race legs.', alternatives: ['run_intervals'] },
