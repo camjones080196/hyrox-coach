@@ -6,7 +6,7 @@ import { STATION_NAMES, STATION_ORDER } from '../domain/standards'
 import type { Exercise, ExerciseCategory, StationId } from '../domain/types'
 import { Sheet } from './Sheet'
 
-const CATS: ExerciseCategory[] = ['station', 'run', 'erg', 'strength', 'conditioning', 'mobility']
+const CATS: ExerciseCategory[] = ['station', 'run', 'erg', 'strength', 'conditioning', 'hiit', 'mobility']
 
 export function ExercisesScreen() {
   const store = useStore()

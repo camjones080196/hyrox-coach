@@ -39,7 +39,7 @@ export interface DivisionStandard {
 
 export type Level = 'beginner' | 'intermediate' | 'advanced'
 
-export type ExerciseCategory = 'run' | 'erg' | 'station' | 'strength' | 'conditioning' | 'mobility'
+export type ExerciseCategory = 'run' | 'erg' | 'station' | 'strength' | 'conditioning' | 'hiit' | 'mobility'
 
 export interface Exercise {
   id: string

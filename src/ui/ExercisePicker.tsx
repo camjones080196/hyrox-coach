@@ -3,7 +3,7 @@ import { exerciseById, getExercises, useStore } from '../data/model'
 import type { Exercise, ExerciseCategory } from '../domain/types'
 import { Sheet } from './Sheet'
 
-const CATS: (ExerciseCategory | 'all')[] = ['all', 'station', 'run', 'erg', 'strength', 'conditioning', 'mobility']
+const CATS: (ExerciseCategory | 'all')[] = ['all', 'station', 'run', 'erg', 'strength', 'conditioning', 'hiit', 'mobility']
 
 /** Pick an exercise. When swapping, the current exercise's alternatives come first. */
 export function ExercisePicker({ current, onPick, onClose }: { current?: string; onPick: (e: Exercise) => void; onClose: () => void }) {
@@ -42,7 +42,7 @@ export function ExercisePicker({ current, onPick, onClose }: { current?: string;
       <input placeholder="Search exercises" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="toggle-group">
         {CATS.map((c) => (
-          <button key={c} className={`toggle ${cat === c ? 'on' : ''}`} onClick={() => setCat(c)}>{c[0].toUpperCase() + c.slice(1)}</button>
+          <button key={c} className={`toggle ${cat === c ? 'on' : ''}`} onClick={() => setCat(c)}>{c === 'hiit' ? 'HIIT' : c[0].toUpperCase() + c.slice(1)}</button>
         ))}
         <button className={`toggle ${adaptiveOnly ? 'on' : ''}`} onClick={() => setAdaptiveOnly(!adaptiveOnly)}>Adaptive-friendly</button>
       </div>
